@@ -1,0 +1,183 @@
+import React, { useEffect, useRef } from 'react';
+import * as Cesium from 'cesium';
+import type { Event } from '../types';
+
+interface GlobeViewerProps {
+  events: Event[];
+  selectedEvent: Event | null;
+  onSelectEvent: (event: Event) => void;
+}
+
+export const GlobeViewer: React.FC<GlobeViewerProps> = ({
+  events,
+  selectedEvent,
+  onSelectEvent,
+}) => {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const viewerRef = useRef<Cesium.Viewer | null>(null);
+
+  // Initialize Cesium Viewer ONCE
+  useEffect(() => {
+    if (!containerRef.current || viewerRef.current) return;
+
+    // Set Ion default token
+    Cesium.Ion.defaultAccessToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiI0YTYyZTk0Yy0yY2UwLTQyOWEtOWU3Yi04YjA1YWM2MGQ3MjYiLCJpZCI6MTU3MzA2LCJpYXQiOjE2OTA0OTkxMzR9.mock';
+
+    const viewer = new Cesium.Viewer(containerRef.current, {
+      baseLayer: false,
+      baseLayerPicker: false,
+      geocoder: false,
+      homeButton: true,
+      infoBox: false,
+      sceneModePicker: false,
+      selectionIndicator: false,
+      timeline: false,
+      animation: false,
+      navigationHelpButton: false,
+      scene3DOnly: true,
+      shadows: false,
+      terrainShadows: Cesium.ShadowMode.DISABLED,
+      skyAtmosphere: false,
+    });
+
+    // 1. Crisp High-DPI Resolution & Antialiasing
+    viewer.resolutionScale = window.devicePixelRatio || 1.0;
+    if (viewer.scene.postProcessStages?.fxaa) {
+      viewer.scene.postProcessStages.fxaa.enabled = true;
+    }
+
+    // 2. High-Quality Globe Imagery
+    const imageryProvider = new Cesium.OpenStreetMapImageryProvider({
+      url: 'https://a.tile.openstreetmap.org/',
+    });
+    viewer.imageryLayers.add(new Cesium.ImageryLayer(imageryProvider));
+
+    // Dark atmosphere and globe styling with maximumScreenSpaceError
+    const scene = viewer.scene;
+    scene.globe.enableLighting = false;
+    scene.globe.baseColor = Cesium.Color.fromCssColorString('#090d16');
+    scene.globe.maximumScreenSpaceError = 2;
+    scene.backgroundColor = Cesium.Color.fromCssColorString('#030712');
+
+    // Click handler for threat markers
+    const handler = new Cesium.ScreenSpaceEventHandler(scene.canvas);
+    handler.setInputAction((movement: any) => {
+      const pickedObject = scene.pick(movement.position);
+      if (Cesium.defined(pickedObject) && pickedObject.id && pickedObject.id.properties) {
+        const eventId = pickedObject.id.properties.eventId?.getValue();
+        if (eventId) {
+          const targetEvent = events.find((e) => e.id === eventId);
+          if (targetEvent) {
+            onSelectEvent(targetEvent);
+
+            // Execute camera flyTo on marker click
+            if (targetEvent.location?.coordinates && targetEvent.location.coordinates.length >= 2) {
+              const lon = Number(targetEvent.location.coordinates[0]);
+              const lat = Number(targetEvent.location.coordinates[1]);
+              if (!isNaN(lon) && !isNaN(lat) && (lon !== 0 || lat !== 0)) {
+                viewer.camera.flyTo({
+                  destination: Cesium.Cartesian3.fromDegrees(lon, lat, 150000),
+                  duration: 1.8,
+                });
+              }
+            }
+          }
+        }
+      }
+    }, Cesium.ScreenSpaceEventType.LEFT_CLICK);
+
+    viewerRef.current = viewer;
+
+    return () => {
+      handler.destroy();
+      if (viewerRef.current && !viewerRef.current.isDestroyed()) {
+        viewerRef.current.destroy();
+        viewerRef.current = null;
+      }
+    };
+  }, []);
+
+  // Update Entities when events list changes
+  useEffect(() => {
+    const viewer = viewerRef.current;
+    if (!viewer) return;
+
+    viewer.entities.removeAll();
+
+    events.forEach((evt) => {
+      if (!evt.location || !Array.isArray(evt.location.coordinates) || evt.location.coordinates.length < 2) {
+        return;
+      }
+
+      const lon = Number(evt.location.coordinates[0]);
+      const lat = Number(evt.location.coordinates[1]);
+
+      if (isNaN(lon) || isNaN(lat) || (lon === 0 && lat === 0)) {
+        return;
+      }
+
+      let color = Cesium.Color.fromCssColorString('#10B981'); // Low: Emerald Green
+      let pointSize = 10;
+      let outlineWidth = 1.5;
+
+      if (evt.threat_level === 'High') {
+        color = Cesium.Color.fromCssColorString('#EF4444'); // High: Crimson Red
+        pointSize = 14;
+        outlineWidth = 3;
+      } else if (evt.threat_level === 'Medium') {
+        color = Cesium.Color.fromCssColorString('#F97316'); // Medium: Amber/Orange
+        pointSize = 12;
+        outlineWidth = 2;
+      }
+
+      viewer.entities.add({
+        position: Cesium.Cartesian3.fromDegrees(lon, lat, 500),
+        point: {
+          pixelSize: pointSize,
+          color: color,
+          outlineColor: Cesium.Color.WHITE.withAlpha(0.9),
+          outlineWidth: outlineWidth,
+          heightReference: Cesium.HeightReference.NONE,
+        },
+        label: {
+          text: `${evt.title} [${evt.threat_level.toUpperCase()}]`,
+          font: 'bold 11px monospace',
+          style: Cesium.LabelStyle.FILL_AND_OUTLINE,
+          outlineWidth: 2,
+          outlineColor: Cesium.Color.BLACK,
+          fillColor: color,
+          verticalOrigin: Cesium.VerticalOrigin.BOTTOM,
+          pixelOffset: new Cesium.Cartesian2(0, -14),
+          distanceDisplayCondition: new Cesium.DistanceDisplayCondition(0, 5000000),
+        },
+        properties: {
+          eventId: evt.id,
+        },
+      });
+    });
+  }, [events]);
+
+  // Fly to selected event when changed from sidebar list or external state
+  useEffect(() => {
+    const viewer = viewerRef.current;
+    if (!viewer || !selectedEvent || !selectedEvent.location?.coordinates) return;
+
+    if (!Array.isArray(selectedEvent.location.coordinates) || selectedEvent.location.coordinates.length < 2) return;
+
+    const lon = Number(selectedEvent.location.coordinates[0]);
+    const lat = Number(selectedEvent.location.coordinates[1]);
+
+    if (isNaN(lon) || isNaN(lat) || (lon === 0 && lat === 0)) return;
+
+    viewer.camera.flyTo({
+      destination: Cesium.Cartesian3.fromDegrees(lon, lat, 150000),
+      duration: 1.8,
+    });
+  }, [selectedEvent]);
+
+  return (
+    <div className="relative w-full h-full bg-slate-950">
+      <div ref={containerRef} className="w-full h-full" />
+    </div>
+  );
+};

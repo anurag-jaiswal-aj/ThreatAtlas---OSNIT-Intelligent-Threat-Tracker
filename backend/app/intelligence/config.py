@@ -1,0 +1,66 @@
+from typing import Dict, Tuple
+
+# Keyword / Action severity weights (0-40 scale contribution)
+ACTION_WEIGHTS: Dict[str, float] = {
+    "airstrike": 35.0,
+    "explosion": 30.0,
+    "offensive": 25.0,
+    "attack": 25.0,
+    "bombing": 30.0,
+    "shelling": 25.0,
+    "protest": 15.0,
+    "riot": 20.0,
+}
+DEFAULT_ACTION_WEIGHT: float = 5.0
+
+# Military / Security Equipment weights (0-25 scale contribution)
+EQUIPMENT_WEIGHTS: Dict[str, float] = {
+    "F-16": 25.0,
+    "T-72": 20.0,
+    "tank": 15.0,
+    "drone": 15.0,
+    "UAV": 15.0,
+    "artillery": 20.0,
+    "missile": 25.0,
+}
+DEFAULT_EQUIPMENT_WEIGHT: float = 5.0
+
+# Configurable location sensitivity weights (0-20 scale contribution)
+LOCATION_SENSITIVITY_WEIGHTS: Dict[str, float] = {
+    "kyiv": 20.0,
+    "taipei": 20.0,
+    "border": 15.0,
+    "capital": 20.0,
+    "embassy": 15.0,
+    "port": 10.0,
+    "airport": 15.0,
+}
+DEFAULT_LOCATION_SENSITIVITY: float = 5.0  # Neutral/default value when unknown or unlisted location
+
+# Source Reliability Configuration (0-100 base reliability)
+SOURCE_RELIABILITY_MAP: Dict[str, float] = {
+    "reuters": 90.0,
+    "bbc": 90.0,
+    "al jazeera": 85.0,
+    "un news": 85.0,
+    "telegram": 50.0,
+}
+DEFAULT_SOURCE_RELIABILITY: float = 60.0
+
+# Threat Level Thresholds
+# Low: 0-39, Medium: 40-69, High: 70-100
+THREAT_LEVEL_LOW_MAX: float = 39.0
+THREAT_LEVEL_MEDIUM_MAX: float = 69.0
+
+def get_threat_level(score: float) -> str:
+    if score <= THREAT_LEVEL_LOW_MAX:
+        return "Low"
+    elif score <= THREAT_LEVEL_MEDIUM_MAX:
+        return "Medium"
+    else:
+        return "High"
+
+# Clustering Configuration Parameters
+MAX_SPATIAL_DISTANCE_KM: float = 50.0
+MAX_TEMPORAL_WINDOW_SECONDS: float = 86400.0  # 24 hours
+MIN_CLUSTER_MATCH_SCORE: float = 0.55
