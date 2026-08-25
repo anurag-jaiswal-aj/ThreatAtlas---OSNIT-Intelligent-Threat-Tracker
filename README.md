@@ -1,124 +1,76 @@
-# OSINT Threat Intelligence Platform (TIP)
+# ThreatAtlas — OSINT Threat Intelligence Platform
 
-A defensive intelligence monitoring platform designed to collect publicly available information, process unstructured reports via NLP, extract threat/credibility scores, and visualize events on an interactive 3D globe.
-
-## Current Development Status
-
-> **Current Phase**: Phase 1 — Step 1: Infrastructure Initialization  
-> **Note**: Most project functionality (OSINT ingestion, NLP pipelines, threat scoring, frontend globe visualization) has **not** been implemented yet. Currently, only basic project structure, Docker container definitions (MongoDB + Redis), and the FastAPI application foundation with health checks are established.
+A defensive intelligence monitoring platform designed to collect publicly available information, process unstructured reports via NLP, extract threat/credibility scores, and visualize events on an interactive 3D CesiumJS globe.
 
 ---
 
-## Prerequisites
+## Architecture Overview
 
-- **Docker** and **Docker Compose** (for MongoDB and Redis)
-- **Python 3.10+** (for running the backend locally)
-- **pip** and **virtualenv**
+- **Backend**: FastAPI (Python 3.10+), spaCy NER, Geocoding, MongoDB, Redis Pub/Sub, WebSockets
+- **Frontend**: React 19, TypeScript, Vite, Tailwind CSS v4, CesiumJS 3D Globe
+- **Database & Cache**: MongoDB (Geospatial 2dsphere indexing) & Redis
 
 ---
 
-## Getting Started
+## Quick Start Guide
 
-### 1. Environment Configuration
+### 1. Start Infrastructure (MongoDB & Redis)
 
-Copy the sample environment file to `.env`:
-
-```bash
-cp .env.example .env
-```
-
-### 2. Infrastructure Setup (MongoDB & Redis)
-
-Start the database and caching services using Docker Compose:
+Make sure Docker is running, then launch the database and cache containers:
 
 ```bash
 docker compose -f infrastructure/docker-compose.yml up -d
 ```
 
-To verify the containers are running:
+---
 
-```bash
-docker compose -f infrastructure/docker-compose.yml ps
-```
+### 2. Start the Backend API Server
 
-### 3. Backend Setup
-
-Navigate to the `backend` directory and set up a virtual environment:
+Open a terminal window and run:
 
 ```bash
 cd backend
-python -m venv venv
-
-# On Windows (PowerShell):
-.\venv\Scripts\Activate.ps1
-
-# On Linux/macOS:
-source venv/bin/activate
-
-# Install Phase 1 dependencies:
-pip install -r requirements.txt
+python -m uvicorn main:app --reload --port 8000
 ```
 
-### 4. Running the Backend Server
-
-Start the FastAPI development server:
-
-```bash
-python main.py
-```
-
-Alternatively, run with Uvicorn directly:
-
-```bash
-uvicorn main:app --reload --port 8000
-```
+> **Backend Status**: Available at `http://localhost:8000`  
+> **Interactive API Docs**: `http://localhost:8000/docs`
 
 ---
 
-## Health Check Verification
+### 3. Start the Frontend Dashboard
 
-Once the backend server is running, verify system status:
+Open a second terminal window and run:
 
-- **Root Health Check**:  
-  `GET http://localhost:8000/health`
-  
-- **API v1 Health Check**:  
-  `GET http://localhost:8000/api/v1/health`
-
-### Expected Response
-
-```json
-{
-  "status": "ok",
-  "project": "OSINT Threat Intelligence Platform",
-  "version": "0.1.0",
-  "environment": "development"
-}
+```bash
+cd frontend
+npm run dev
 ```
+
+> **Frontend Dashboard**: Open `http://localhost:3000` in your web browser.
 
 ---
 
-## Project Structure
+## Workflow & Features
 
-```text
-ThreatAtlas/
-├── backend/
-│   ├── app/
-│   │   ├── api/            # API routers & endpoints
-│   │   ├── core/           # Config (pydantic-settings) & logging
-│   │   ├── db/             # Database connection & models
-│   │   ├── ingestion/      # OSINT data collectors
-│   │   ├── nlp/            # spaCy, EntityRuler & Embeddings
-│   │   ├── intelligence/   # Clustering & Scoring algorithms
-│   │   ├── services/       # Business logic layer
-│   │   └── websockets/     # Real-time WebSocket handlers
-│   ├── tests/              # Test suite
-│   ├── main.py             # FastAPI entry point
-│   └── requirements.txt    # Python dependencies
-├── frontend/               # Frontend React application (Phase 4)
-├── infrastructure/         # Docker Compose & container setups
-│   └── docker-compose.yml  # MongoDB & Redis definitions
-├── .env.example            # Baseline environment variables
-├── .gitignore
-└── README.md
+1. **Ingest OSINT Feeds**: Trigger RSS ingestion via the API or backend CLI script.
+2. **Process Intelligence**: Click **"Process Pending OSINT"** in the top navigation bar of the web dashboard to process raw posts through text cleaning, spaCy NER, geocoding, threat scoring, and event clustering.
+3. **Explore the 3D Globe**: Filter events by threat level (`High`, `Medium`, `Low`), search keywords, and click markers on the 3D Cesium globe to open transparent score breakdowns and source lists.
+
+---
+
+## Running Test Suites
+
+To verify all 52 unit and integration tests across the backend:
+
+```bash
+cd backend
+pytest
+```
+
+To verify the frontend production build:
+
+```bash
+cd frontend
+npm run build
 ```
