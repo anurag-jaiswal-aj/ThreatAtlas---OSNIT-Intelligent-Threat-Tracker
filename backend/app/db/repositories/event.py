@@ -4,7 +4,7 @@ from typing import Any, Dict, List, Optional
 from bson import ObjectId
 from motor.motor_asyncio import AsyncIOMotorDatabase
 from app.schemas.common import utc_now
-from app.schemas.event import EventCreate, EventInDB, EventResponse, EventUpdate
+from app.schemas.event import EventCreate, EventInDB, EventResponse, EventUpdate, EventGlobalMetrics
 
 logger = logging.getLogger("threat_atlas.repo.event")
 
@@ -153,6 +153,47 @@ class EventRepository:
             search=search,
         )
         return await self.collection.count_documents(query)
+
+    async def get_global_metrics(self) -> EventGlobalMetrics:
+        """Calculate global counts for all threat levels using a single aggregation pipeline."""
+        pipeline = [
+            {
+                "$group": {
+                    "_id": "$threat_level",
+                    "count": {"$sum": 1}
+                }
+            }
+        ]
+
+        cursor = self.collection.aggregate(pipeline)
+        docs = await cursor.to_list(length=None)
+
+        # Initialize counts
+        total = 0
+        high = 0
+        medium = 0
+        low = 0
+
+        # Populate from aggregation results
+        for doc in docs:
+            level = doc.get("_id")
+            count = doc.get("count", 0)
+
+            total += count
+
+            if level == "High":
+                high = count
+            elif level == "Medium":
+                medium = count
+            elif level == "Low":
+                low = count
+
+        return EventGlobalMetrics(
+            total=total,
+            high=high,
+            medium=medium,
+            low=low
+        )
 
     @staticmethod
     def _to_response(doc: dict) -> EventResponse:

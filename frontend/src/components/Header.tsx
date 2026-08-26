@@ -1,19 +1,17 @@
 import React, { useState } from 'react';
 import { Shield, RefreshCw, AlertTriangle, Layers } from 'lucide-react';
 import { processPendingPosts } from '../api/client';
-import type { ProcessPendingResponse } from '../types';
+import type { ProcessPendingResponse, EventGlobalMetrics } from '../types';
 
 interface HeaderProps {
   isOnline: boolean;
-  totalEvents: number;
-  highThreatCount: number;
+  globalMetrics: EventGlobalMetrics;
   onRefresh: () => void;
 }
 
 export const Header: React.FC<HeaderProps> = ({
   isOnline,
-  totalEvents,
-  highThreatCount,
+  globalMetrics,
   onRefresh,
 }) => {
   const [isProcessing, setIsProcessing] = useState(false);
@@ -58,14 +56,14 @@ export const Header: React.FC<HeaderProps> = ({
         <div className="flex items-center gap-2 px-3 py-1.5 bg-slate-900/60 border border-slate-800 rounded-md font-mono text-xs">
           <Layers className="w-4 h-4 text-slate-400" />
           <span className="text-slate-400">Active Events:</span>
-          <span className="text-slate-200 font-bold">{totalEvents}</span>
+          <span className="text-slate-200 font-bold">{globalMetrics.total}</span>
         </div>
 
-        {highThreatCount > 0 && (
+        {globalMetrics.high > 0 && (
           <div className="flex items-center gap-2 px-3 py-1.5 bg-red-950/40 border border-red-900/50 rounded-md font-mono text-xs animate-pulse">
             <AlertTriangle className="w-4 h-4 text-red-400" />
             <span className="text-red-300">High Threat:</span>
-            <span className="text-red-400 font-bold">{highThreatCount}</span>
+            <span className="text-red-400 font-bold">{globalMetrics.high}</span>
           </div>
         )}
 

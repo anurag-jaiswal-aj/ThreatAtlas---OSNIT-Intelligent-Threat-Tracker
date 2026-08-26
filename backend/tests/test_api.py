@@ -163,3 +163,29 @@ def test_process_pending_intelligence_flow(mocker):
     assert data["events_created"] == 1
     assert data["events_merged"] == 0
     assert data["errors"] == 0
+
+
+def test_get_global_metrics_endpoint(mocker):
+    """6. Test GET /api/v1/events/stats for global metric counts."""
+    from app.schemas.event import EventGlobalMetrics
+    mock_metrics = EventGlobalMetrics(
+        total=150,
+        high=20,
+        medium=50,
+        low=80
+    )
+
+    mocker.patch("app.api.v1.endpoints.events.get_database", return_value=MagicMock())
+    mocker.patch(
+        "app.api.v1.endpoints.events.EventRepository.get_global_metrics",
+        AsyncMock(return_value=mock_metrics)
+    )
+
+    response = client.get("/api/v1/events/stats")
+
+    assert response.status_code == 200
+    data = response.json()
+    assert data["total"] == 150
+    assert data["high"] == 20
+    assert data["medium"] == 50
+    assert data["low"] == 80

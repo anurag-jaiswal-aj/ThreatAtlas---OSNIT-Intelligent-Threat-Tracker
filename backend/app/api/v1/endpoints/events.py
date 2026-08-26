@@ -5,7 +5,7 @@ from fastapi import APIRouter, HTTPException, Query, status
 from app.db.session import get_database
 from app.db.repositories.event import EventRepository
 from app.db.repositories.raw_post import RawPostRepository
-from app.schemas.event import EventListResponse, EventResponse
+from app.schemas.event import EventListResponse, EventResponse, EventGlobalMetrics
 from app.schemas.raw_post import RawPostResponse
 
 router = APIRouter()
@@ -79,6 +79,14 @@ async def list_events(
     )
 
     return EventListResponse(total=total, limit=limit, skip=skip, items=events)
+
+
+@router.get("/stats", response_model=EventGlobalMetrics, summary="Get Global Event Metrics")
+async def get_global_metrics():
+    """Retrieve global un-filtered counts for Total, High, Medium, and Low threat events."""
+    db = get_database()
+    event_repo = EventRepository(db)
+    return await event_repo.get_global_metrics()
 
 
 @router.get("/{id}", response_model=EventResponse, summary="Get Single Intelligence Event")

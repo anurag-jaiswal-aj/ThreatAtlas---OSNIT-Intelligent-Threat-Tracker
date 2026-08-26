@@ -82,3 +82,29 @@ async def test_event_repository_create():
     assert result.id == str(fake_id)
     assert result.title == "Test Event"
     assert result.threat_level == "Medium"
+
+
+@pytest.mark.asyncio
+async def test_event_repository_get_global_metrics():
+    mock_db = MagicMock()
+    mock_collection = MagicMock()
+    mock_db.__getitem__.return_value = mock_collection
+
+    mock_cursor = AsyncMock()
+    mock_cursor.to_list = AsyncMock(return_value=[
+        {"_id": "High", "count": 10},
+        {"_id": "Medium", "count": 20},
+        {"_id": "Low", "count": 30},
+        {"_id": "Unknown", "count": 5}, # Test that we capture unexpected levels in total
+    ])
+    mock_collection.aggregate.return_value = mock_cursor
+
+    repo = EventRepository(mock_db)
+    metrics = await repo.get_global_metrics()
+
+    assert metrics.high == 10
+    assert metrics.medium == 20
+    assert metrics.low == 30
+    assert metrics.total == 65
+
+    mock_collection.aggregate.assert_called_once()

@@ -100,3 +100,10 @@ class EventListResponse(BaseModel):
     skip: int = Field(..., description="Page skip offset")
     items: List[EventResponse] = Field(..., description="List of events")
 
+
+class EventGlobalMetrics(BaseModel):
+    total: int = Field(..., description="Global total events count")
+    high: int = Field(..., description="Global High threat events count")
+    medium: int = Field(..., description="Global Medium threat events count")
+    low: int = Field(..., description="Global Low threat events count")
+

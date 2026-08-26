@@ -1,6 +1,6 @@
 import React from 'react';
 import { Search, AlertTriangle, ShieldAlert, ShieldCheck, MapPin, Calendar } from 'lucide-react';
-import type { Event, EventFilters } from '../types';
+import type { Event, EventFilters, EventGlobalMetrics } from '../types';
 
 interface FilterPanelProps {
   filters: EventFilters;
@@ -8,7 +8,7 @@ interface FilterPanelProps {
   events: Event[];
   selectedEvent: Event | null;
   onSelectEvent: (event: Event) => void;
-  totalEventsCount: number;
+  globalMetrics: EventGlobalMetrics;
 }
 
 export const FilterPanel: React.FC<FilterPanelProps> = ({
@@ -17,11 +17,12 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
   events,
   selectedEvent,
   onSelectEvent,
-  totalEventsCount,
+  globalMetrics,
 }) => {
-  const highCount = events.filter((e) => e.threat_level === 'High').length;
-  const medCount = events.filter((e) => e.threat_level === 'Medium').length;
-  const lowCount = events.filter((e) => e.threat_level === 'Low').length;
+  const highCount = globalMetrics.high;
+  const medCount = globalMetrics.medium;
+  const lowCount = globalMetrics.low;
+  const totalCount = globalMetrics.total;
 
   const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     onFilterChange({ ...filters, search: e.target.value });
@@ -56,7 +57,7 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
                 : 'text-slate-400 hover:text-slate-200'
             }`}
           >
-            All ({totalEventsCount})
+            All ({totalCount})
           </button>
           <button
             onClick={() => handleThreatLevelSelect('High')}
