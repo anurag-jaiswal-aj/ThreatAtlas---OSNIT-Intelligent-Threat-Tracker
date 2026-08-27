@@ -1,4 +1,5 @@
 import logging
+import asyncio
 from typing import Any, Dict, List, Optional
 from app.nlp.schemas import NLPResult
 from app.nlp.service import nlp_service
@@ -11,6 +12,7 @@ from app.intelligence.threat_scorer import calculate_threat_score, is_post_relev
 from app.intelligence.credibility_scorer import calculate_credibility_score
 from app.intelligence.clustering import find_best_matching_event
 from app.core.redis import publish_event
+from app.services.webhook_service import dispatch_webhooks_for_event
 
 logger = logging.getLogger("threat_atlas.intelligence")
 
@@ -172,6 +174,7 @@ class IntelligenceService:
 
             if created_event:
                 await publish_event(created_event.model_dump(), action="created")
+                asyncio.create_task(dispatch_webhooks_for_event(created_event))
 
             return {
                 "action": "created",

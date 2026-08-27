@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
-import { Shield, RefreshCw, AlertTriangle, Layers } from 'lucide-react';
+import { Shield, RefreshCw, AlertTriangle, Layers, Bell } from 'lucide-react';
 import { processPendingPosts } from '../api/client';
 import type { ProcessPendingResponse, EventGlobalMetrics } from '../types';
+import { AlertsModal } from './AlertsModal';
 
 interface HeaderProps {
   isOnline: boolean;
@@ -16,6 +17,7 @@ export const Header: React.FC<HeaderProps> = ({
 }) => {
   const [isProcessing, setIsProcessing] = useState(false);
   const [processResult, setProcessResult] = useState<ProcessPendingResponse | null>(null);
+  const [isAlertsModalOpen, setIsAlertsModalOpen] = useState(false);
 
   const handleProcessPending = async () => {
     setIsProcessing(true);
@@ -82,6 +84,14 @@ export const Header: React.FC<HeaderProps> = ({
       {/* Actions */}
       <div className="flex items-center gap-3">
         <button
+          onClick={() => setIsAlertsModalOpen(true)}
+          className="flex items-center gap-2 px-4 py-2 bg-slate-800 hover:bg-slate-700 text-slate-300 font-medium text-xs rounded-lg border border-slate-700 transition-all cursor-pointer"
+        >
+          <Bell className="w-3.5 h-3.5" />
+          <span>Alerts</span>
+        </button>
+
+        <button
           onClick={handleProcessPending}
           disabled={isProcessing}
           className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-500 disabled:bg-slate-800 disabled:text-slate-500 text-white font-medium text-xs rounded-lg border border-blue-500/50 transition-all shadow-lg shadow-blue-950/50 cursor-pointer"
@@ -96,6 +106,11 @@ export const Header: React.FC<HeaderProps> = ({
           </div>
         )}
       </div>
+
+      <AlertsModal
+        isOpen={isAlertsModalOpen}
+        onClose={() => setIsAlertsModalOpen(false)}
+      />
     </header>
   );
 };
