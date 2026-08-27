@@ -21,8 +21,8 @@ export const apiClient = axios.create({
   },
 });
 
-export const fetchEvents = async (filters: EventFilters = {}): Promise<EventListResponse> => {
-  const params: Record<string, any> = { limit: 100 };
+export const fetchEvents = async (filters: EventFilters = {}, limit?: number): Promise<EventListResponse> => {
+  const params: Record<string, any> = { limit: limit ?? (filters as any).limit ?? 100 };
   if (filters.threat_level) params.threat_level = filters.threat_level;
   if (filters.min_threat_score) params.min_threat_score = filters.min_threat_score;
   if (filters.search) params.search = filters.search;
