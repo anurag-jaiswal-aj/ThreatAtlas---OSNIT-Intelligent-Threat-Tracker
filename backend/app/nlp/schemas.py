@@ -12,6 +12,7 @@ class Location(BaseModel):
     lat: float
     lng: float
     confidence: str = Field(default="unknown", description="e.g., high, medium, low, unknown")
+    country_code: Optional[str] = None
 
 class NLPResult(BaseModel):
     original_text: str

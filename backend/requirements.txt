@@ -12,3 +12,4 @@ redis>=5.0.0,<6.0.0
 pyjwt>=2.8.0,<3.0.0
 passlib[bcrypt]>=1.7.4,<2.0.0
 sentence-transformers>=2.2.0,<3.0.0
+apscheduler==3.10.4

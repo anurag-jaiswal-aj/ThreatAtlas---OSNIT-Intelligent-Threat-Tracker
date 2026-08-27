@@ -45,6 +45,7 @@ async def list_events(
     end_date: Optional[datetime] = Query(default=None, description="End date (UTC ISO)"),
     bbox: Optional[str] = Query(default=None, description="Geospatial bounding box 'min_lon,min_lat,max_lon,max_lat'"),
     search: Optional[str] = Query(default=None, description="Text search in title or summary"),
+    countries: Optional[str] = Query(default=None, description="Comma-separated ISO country codes (e.g. ua,ru)"),
 ):
     """Retrieve intelligence events with rich filtering, text search, geospatial bounding box, and pagination."""
     if threat_level and threat_level not in {"Low", "Medium", "High"}:
@@ -54,6 +55,13 @@ async def list_events(
         )
 
     parsed_bbox = parse_and_validate_bbox(bbox)
+
+    parsed_countries = None
+    if countries:
+        parsed_countries = list({c.strip().lower() for c in countries.split(",") if c.strip()})
+        if not parsed_countries:
+            parsed_countries = None
+
     db = get_database()
     event_repo = EventRepository(db)
 
@@ -67,6 +75,7 @@ async def list_events(
         end_date=end_date,
         bbox=parsed_bbox,
         search=search,
+        countries=parsed_countries,
     )
     total = await event_repo.count_events(
         threat_level=threat_level,
@@ -76,6 +85,7 @@ async def list_events(
         end_date=end_date,
         bbox=parsed_bbox,
         search=search,
+        countries=parsed_countries,
     )
 
     return EventListResponse(total=total, limit=limit, skip=skip, items=events)
@@ -87,6 +97,14 @@ async def get_global_metrics():
     db = get_database()
     event_repo = EventRepository(db)
     return await event_repo.get_global_metrics()
+
+
+@router.get("/countries", response_model=List[str], summary="Get Available Countries")
+async def get_countries():
+    """Retrieve list of distinct country codes present in events."""
+    db = get_database()
+    event_repo = EventRepository(db)
+    return await event_repo.get_distinct_countries()
 
 
 @router.get("/{id}", response_model=EventResponse, summary="Get Single Intelligence Event")

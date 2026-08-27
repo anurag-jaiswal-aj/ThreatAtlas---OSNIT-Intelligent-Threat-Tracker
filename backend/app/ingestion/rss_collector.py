@@ -89,14 +89,28 @@ class RSSCollector:
     ) -> Optional[RawPostCreate]:
         """Normalize an RSS entry dictionary into a validated RawPostCreate schema."""
         title = clean_html_text(entry.get("title", ""))
-        summary = clean_html_text(entry.get("summary") or entry.get("description") or "")
 
-        if title and summary:
-            full_text = f"{title}\n\n{summary}"
+        content_text = ""
+        entry_content = entry.get("content")
+        if isinstance(entry_content, list):
+            pieces = []
+            for c in entry_content:
+                if isinstance(c, dict):
+                    val = c.get("value")
+                    if val and isinstance(val, str):
+                        pieces.append(val)
+            if pieces:
+                content_text = clean_html_text("\n\n".join(pieces))
+
+        summary = clean_html_text(entry.get("summary") or entry.get("description") or "")
+        body = content_text if content_text else summary
+
+        if title and body:
+            full_text = f"{title}\n\n{body}"
         elif title:
             full_text = title
-        elif summary:
-            full_text = summary
+        elif body:
+            full_text = body
         else:
             logger.warning("Skipping entry from '%s' with empty title and text content.", source_name)
             return None

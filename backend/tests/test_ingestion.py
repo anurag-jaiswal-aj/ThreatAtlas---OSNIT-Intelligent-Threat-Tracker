@@ -83,6 +83,36 @@ def test_normalize_entry_empty_content():
     assert post_create is None
 
 
+def test_normalize_entry_with_content():
+    collector = RSSCollector()
+    entry = {
+        "id": "item-003",
+        "title": "Atom Feed Entry",
+        "content": [
+            {"type": "text/html", "value": "<p>This is the <b>actual</b> content.</p>"}
+        ]
+    }
+    post_create = collector.normalize_entry(entry, "Atom Source")
+    assert post_create is not None
+    assert "Atom Feed Entry" in post_create.text
+    assert "This is the actual content." in post_create.text
+
+
+def test_normalize_entry_fallback_to_summary():
+    collector = RSSCollector()
+    entry = {
+        "id": "item-004",
+        "title": "RSS Feed Entry",
+        "summary": "This is a summary."
+    }
+    post_create = collector.normalize_entry(entry, "RSS Source")
+    assert post_create is not None
+    assert "RSS Feed Entry" in post_create.text
+    assert "This is a summary." in post_create.text
+    assert "content" not in entry
+
+
+
 @pytest.mark.asyncio
 async def test_ingestion_service_stats_and_deduplication():
     mock_db = MagicMock()

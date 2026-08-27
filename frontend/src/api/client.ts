@@ -25,6 +25,9 @@ export const fetchEvents = async (filters: EventFilters = {}): Promise<EventList
   if (filters.search) params.search = filters.search;
   if (filters.event_type) params.event_type = filters.event_type;
   if (filters.bbox) params.bbox = filters.bbox;
+  if (filters.countries && filters.countries.length > 0) {
+    params.countries = filters.countries.join(',');
+  }
 
   const response = await apiClient.get<EventListResponse>('/events', { params });
   return response.data;
@@ -32,6 +35,11 @@ export const fetchEvents = async (filters: EventFilters = {}): Promise<EventList
 
 export const fetchGlobalMetrics = async (): Promise<EventGlobalMetrics> => {
   const response = await apiClient.get<EventGlobalMetrics>('/events/stats');
+  return response.data;
+};
+
+export const fetchAvailableCountries = async (): Promise<string[]> => {
+  const response = await apiClient.get<string[]>('/events/countries');
   return response.data;
 };
 
