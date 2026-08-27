@@ -190,7 +190,7 @@ def test_process_pending_irrelevant_post(mocker):
     mock_nlp_result = MagicMock()
     mocker.patch("app.api.v1.endpoints.intelligence.nlp_service.process_text", AsyncMock(return_value=mock_nlp_result))
     mocker.patch("app.api.v1.endpoints.intelligence.is_post_relevant", return_value=False)
-    
+
     mock_process_post = mocker.patch(
         "app.api.v1.endpoints.intelligence.intelligence_service.process_post",
         AsyncMock()
@@ -204,7 +204,7 @@ def test_process_pending_irrelevant_post(mocker):
     assert data["events_merged"] == 0
     assert data["events_ignored"] == 1
     assert data["errors"] == 0
-    
+
     mock_update.assert_called_with(post_id, "ignored")
     mock_process_post.assert_not_called()
 
@@ -234,3 +234,24 @@ def test_get_global_metrics_endpoint(mocker):
     assert data["high"] == 20
     assert data["medium"] == 50
     assert data["low"] == 80
+
+def test_events_country_filtering_and_endpoint(mocker):
+    # Test valid countries param
+    mock_list = mocker.patch("app.api.v1.endpoints.events.EventRepository.list_events", return_value=[])
+    mock_count = mocker.patch("app.api.v1.endpoints.events.EventRepository.count_events", return_value=0)
+    mocker.patch("app.api.v1.endpoints.events.get_database", return_value=mocker.MagicMock())
+
+    response = client.get("/api/v1/events?countries= ua, ru ,")
+    assert response.status_code == 200
+
+    # Assert parsed correctly to lowercase array
+    mock_list.assert_called_once()
+    kwargs = mock_list.call_args.kwargs
+    # Because sets can be unordered, we sort them for the check or just compare sets
+    assert set(kwargs["countries"]) == {"ua", "ru"}
+
+    # Test the countries endpoint
+    mock_distinct = mocker.patch("app.api.v1.endpoints.events.EventRepository.get_distinct_countries", return_value=["fr", "ua"])
+    response2 = client.get("/api/v1/events/countries")
+    assert response2.status_code == 200
+    assert response2.json() == ["fr", "ua"]

@@ -18,6 +18,7 @@ class EventBase(BaseModel):
     entities: Dict[str, List[str]] = Field(default_factory=default_entities, description="Extracted named entities")
     location_name: Optional[str] = Field(None, description="Human-readable location name")
     location: Optional[GeoJSONPoint] = Field(None, description="GeoJSON point coordinates [lng, lat]")
+    country_code: Optional[str] = Field(None, description="ISO 3166-1 alpha-2 country code")
     event_timestamp: datetime = Field(..., description="Primary timestamp when the event occurred (UTC)")
     threat_score: float = Field(default=0.0, ge=0.0, le=100.0, description="Calculated threat score (0-100)")
     threat_level: str = Field(default="Low", description="Threat category: Low, Medium, High")
@@ -55,6 +56,7 @@ class EventUpdate(BaseModel):
     entities: Optional[Dict[str, List[str]]] = None
     location_name: Optional[str] = None
     location: Optional[GeoJSONPoint] = None
+    country_code: Optional[str] = None
     event_timestamp: Optional[datetime] = None
     threat_score: Optional[float] = Field(None, ge=0.0, le=100.0)
     threat_level: Optional[str] = None

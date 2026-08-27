@@ -90,3 +90,15 @@ def test_geojson_point_validation():
 
     with pytest.raises(ValidationError):
         GeoJSONPoint(coordinates=[30.5234])  # Invalid, requires 2 floats
+
+def test_event_schema_country_code():
+    from app.schemas.event import EventBase
+    from datetime import datetime
+
+    # Valid with country code
+    evt1 = EventBase(title="Test", event_timestamp=datetime.now(), country_code="ua")
+    assert evt1.country_code == "ua"
+
+    # Valid without country code
+    evt2 = EventBase(title="Test", event_timestamp=datetime.now())
+    assert evt2.country_code is None

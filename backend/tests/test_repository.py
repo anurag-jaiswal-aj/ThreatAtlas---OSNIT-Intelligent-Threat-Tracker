@@ -108,3 +108,20 @@ async def test_event_repository_get_global_metrics():
     assert metrics.total == 65
 
     mock_collection.aggregate.assert_called_once()
+
+@pytest.mark.asyncio
+async def test_event_repository_build_query_countries():
+    repo = EventRepository(AsyncMock())
+
+    # Test valid countries
+    query = repo._build_query(countries=["ua", "ru"])
+    assert "country_code" in query
+    assert query["country_code"] == {"$in": ["ua", "ru"]}
+
+    # Test empty countries
+    query_empty = repo._build_query(countries=[])
+    assert "country_code" not in query_empty
+
+    # Test None countries
+    query_none = repo._build_query(countries=None)
+    assert "country_code" not in query_none

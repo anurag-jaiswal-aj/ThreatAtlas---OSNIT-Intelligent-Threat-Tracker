@@ -86,6 +86,10 @@ async def init_db() -> None:
             [("location", GEOSPHERE)],
             name="idx_events_location_2dsphere",
         ),
+        IndexModel(
+            [("country_code", ASCENDING)],
+            name="idx_events_country_code",
+        ),
     ]
 
     try:
