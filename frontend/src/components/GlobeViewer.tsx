@@ -8,7 +8,7 @@ interface GlobeViewerProps {
   onSelectEvent: (event: Event) => void;
 }
 
-export const GlobeViewer: React.FC<GlobeViewerProps> = ({
+export const GlobeViewerComponent: React.FC<GlobeViewerProps> = ({
   events,
   selectedEvent,
   onSelectEvent,
@@ -24,6 +24,8 @@ export const GlobeViewer: React.FC<GlobeViewerProps> = ({
     Cesium.Ion.defaultAccessToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJqdGkiOiI0YTYyZTk0Yy0yY2UwLTQyOWEtOWU3Yi04YjA1YWM2MGQ3MjYiLCJpZCI6MTU3MzA2LCJpYXQiOjE2OTA0OTkxMzR9.mock';
 
     const viewer = new Cesium.Viewer(containerRef.current, {
+      requestRenderMode: true,
+      maximumRenderTimeChange: Infinity,
       baseLayer: false,
       baseLayerPicker: false,
       geocoder: false,
@@ -102,7 +104,8 @@ export const GlobeViewer: React.FC<GlobeViewerProps> = ({
     const viewer = viewerRef.current;
     if (!viewer) return;
 
-    viewer.entities.removeAll();
+    let needsRender = false;
+    const currentEventIds = new Set<string>();
 
     events.forEach((evt) => {
       if (!evt.location || !Array.isArray(evt.location.coordinates) || evt.location.coordinates.length < 2) {
@@ -115,6 +118,8 @@ export const GlobeViewer: React.FC<GlobeViewerProps> = ({
       if (isNaN(lon) || isNaN(lat) || (lon === 0 && lat === 0)) {
         return;
       }
+
+      currentEventIds.add(evt.id);
 
       let color = Cesium.Color.fromCssColorString('#10B981'); // Low: Emerald Green
       let pointSize = 10;
@@ -130,31 +135,77 @@ export const GlobeViewer: React.FC<GlobeViewerProps> = ({
         outlineWidth = 2;
       }
 
-      viewer.entities.add({
-        position: Cesium.Cartesian3.fromDegrees(lon, lat, 500),
-        point: {
-          pixelSize: pointSize,
-          color: color,
-          outlineColor: Cesium.Color.WHITE.withAlpha(0.9),
-          outlineWidth: outlineWidth,
-          heightReference: Cesium.HeightReference.NONE,
-        },
-        label: {
-          text: `${evt.title} [${evt.threat_level.toUpperCase()}]`,
-          font: 'bold 11px monospace',
-          style: Cesium.LabelStyle.FILL_AND_OUTLINE,
-          outlineWidth: 2,
-          outlineColor: Cesium.Color.BLACK,
-          fillColor: color,
-          verticalOrigin: Cesium.VerticalOrigin.BOTTOM,
-          pixelOffset: new Cesium.Cartesian2(0, -14),
-          distanceDisplayCondition: new Cesium.DistanceDisplayCondition(0, 5000000),
-        },
-        properties: {
-          eventId: evt.id,
-        },
-      });
+      const position = Cesium.Cartesian3.fromDegrees(lon, lat, 500);
+      const labelText = `${evt.title} [${evt.threat_level.toUpperCase()}]`;
+
+      const existingEntity = viewer.entities.getById(evt.id);
+
+      if (existingEntity) {
+        // Update existing entity properties
+        if (existingEntity.position) {
+          (existingEntity.position as any).setValue(position);
+        }
+        if (existingEntity.point) {
+          existingEntity.point.color = new Cesium.ConstantProperty(color);
+          existingEntity.point.pixelSize = new Cesium.ConstantProperty(pointSize);
+          existingEntity.point.outlineWidth = new Cesium.ConstantProperty(outlineWidth);
+        }
+        if (existingEntity.label) {
+          existingEntity.label.text = new Cesium.ConstantProperty(labelText);
+          existingEntity.label.fillColor = new Cesium.ConstantProperty(color);
+        }
+        needsRender = true;
+      } else {
+        // Create new entity
+        viewer.entities.add({
+          id: evt.id,
+          position: position,
+          point: {
+            pixelSize: pointSize,
+            color: color,
+            outlineColor: Cesium.Color.WHITE.withAlpha(0.9),
+            outlineWidth: outlineWidth,
+            heightReference: Cesium.HeightReference.NONE,
+          },
+          label: {
+            text: labelText,
+            font: 'bold 11px monospace',
+            style: Cesium.LabelStyle.FILL_AND_OUTLINE,
+            outlineWidth: 2,
+            outlineColor: Cesium.Color.BLACK,
+            fillColor: color,
+            verticalOrigin: Cesium.VerticalOrigin.BOTTOM,
+            pixelOffset: new Cesium.Cartesian2(0, -14),
+            distanceDisplayCondition: new Cesium.DistanceDisplayCondition(0, 5000000),
+          },
+          properties: {
+            eventId: evt.id,
+          },
+        });
+        needsRender = true;
+      }
     });
+
+    // Remove entities that are no longer in the events list
+    // Safe check using existing eventId property to avoid removing unrelated entities
+    const entitiesToRemove: Cesium.Entity[] = [];
+    viewer.entities.values.forEach((entity) => {
+      const eventId = entity.properties?.eventId?.getValue();
+      if (eventId && !currentEventIds.has(eventId)) {
+        entitiesToRemove.push(entity);
+      }
+    });
+
+    if (entitiesToRemove.length > 0) {
+      entitiesToRemove.forEach((entity) => {
+        viewer.entities.remove(entity);
+      });
+      needsRender = true;
+    }
+
+    if (needsRender) {
+      viewer.scene.requestRender();
+    }
   }, [events]);
 
   // Fly to selected event when changed from sidebar list or external state
@@ -181,3 +232,5 @@ export const GlobeViewer: React.FC<GlobeViewerProps> = ({
     </div>
   );
 };
+
+export const GlobeViewer = React.memo(GlobeViewerComponent);
