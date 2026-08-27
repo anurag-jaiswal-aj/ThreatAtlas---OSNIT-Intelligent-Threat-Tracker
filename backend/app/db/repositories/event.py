@@ -59,6 +59,7 @@ class EventRepository:
         end_date: Optional[datetime] = None,
         bbox: Optional[List[float]] = None,
         search: Optional[str] = None,
+        countries: Optional[List[str]] = None,
     ) -> Dict[str, Any]:
         """Construct MongoDB filter query from parameters."""
         query: Dict[str, Any] = {}
@@ -98,6 +99,9 @@ class EventRepository:
                 {"summary": {"$regex": search, "$options": "i"}},
             ]
 
+        if countries:
+            query["country_code"] = {"$in": countries}
+
         return query
 
     async def list_events(
@@ -111,6 +115,7 @@ class EventRepository:
         end_date: Optional[datetime] = None,
         bbox: Optional[List[float]] = None,
         search: Optional[str] = None,
+        countries: Optional[List[str]] = None,
     ) -> List[EventResponse]:
         """List events with rich filtering and pagination."""
         query = self._build_query(
@@ -121,6 +126,7 @@ class EventRepository:
             end_date=end_date,
             bbox=bbox,
             search=search,
+            countries=countries,
         )
 
         cursor = (
@@ -141,8 +147,9 @@ class EventRepository:
         end_date: Optional[datetime] = None,
         bbox: Optional[List[float]] = None,
         search: Optional[str] = None,
+        countries: Optional[List[str]] = None,
     ) -> int:
-        """Count total matching events for a query."""
+        """Count total documents matching filters for pagination."""
         query = self._build_query(
             threat_level=threat_level,
             min_threat_score=min_threat_score,
@@ -151,6 +158,7 @@ class EventRepository:
             end_date=end_date,
             bbox=bbox,
             search=search,
+            countries=countries,
         )
         return await self.collection.count_documents(query)
 
@@ -195,8 +203,13 @@ class EventRepository:
             low=low
         )
 
+    async def get_distinct_countries(self) -> List[str]:
+        """Get distinct country codes that exist in current events, omitting null/empty."""
+        countries = await self.collection.distinct("country_code")
+        return sorted([c for c in countries if c and isinstance(c, str) and c.strip()])
+
     @staticmethod
-    def _to_response(doc: dict) -> EventResponse:
+    def _to_response(doc: Dict[str, Any]) -> EventResponse:
         """Convert MongoDB document dict to EventResponse Pydantic model."""
         doc_copy = dict(doc)
         doc_copy["id"] = str(doc_copy.pop("_id"))

@@ -1,6 +1,7 @@
-import React from 'react';
-import { Search, AlertTriangle, ShieldAlert, ShieldCheck, MapPin, Calendar } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Search, AlertTriangle, ShieldAlert, ShieldCheck, MapPin, Calendar, Globe, X, ChevronDown } from 'lucide-react';
 import type { Event, EventFilters, EventGlobalMetrics } from '../types';
+import { fetchAvailableCountries } from '../api/client';
 
 interface FilterPanelProps {
   filters: EventFilters;
@@ -19,6 +20,34 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
   onSelectEvent,
   globalMetrics,
 }) => {
+  const [availableCountries, setAvailableCountries] = useState<string[]>([]);
+  const [isLoadingCountries, setIsLoadingCountries] = useState(false);
+  const [isCountryDropdownOpen, setIsCountryDropdownOpen] = useState(false);
+
+  useEffect(() => {
+    const loadCountries = async () => {
+      setIsLoadingCountries(true);
+      try {
+        const countries = await fetchAvailableCountries();
+        setAvailableCountries(countries);
+      } catch (err) {
+        console.error('Failed to load available countries', err);
+      } finally {
+        setIsLoadingCountries(false);
+      }
+    };
+    loadCountries();
+  }, []);
+
+  const getCountryName = (code: string) => {
+    try {
+      const regionNames = new Intl.DisplayNames(['en'], { type: 'region' });
+      return regionNames.of(code.toUpperCase()) || code.toUpperCase();
+    } catch {
+      return code.toUpperCase();
+    }
+  };
+
   const highCount = globalMetrics.high;
   const medCount = globalMetrics.medium;
   const lowCount = globalMetrics.low;
@@ -39,6 +68,20 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
   const handleToggleHideLowThreat = () => {
     const isHidden = filters.min_threat_score === 40;
     onFilterChange({ ...filters, min_threat_score: isHidden ? undefined : 40 });
+  };
+
+  const handleCountryToggle = (code: string) => {
+    const current = filters.countries || [];
+    const updated = current.includes(code)
+      ? current.filter(c => c !== code)
+      : [...current, code];
+
+    onFilterChange({ ...filters, countries: updated });
+  };
+
+  const handleClearCountries = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    onFilterChange({ ...filters, countries: [] });
   };
 
   return (
@@ -129,6 +172,59 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
             aria-label="Minimum Threat Score"
             className="w-full accent-blue-500 h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer"
           />
+        </div>
+
+        {/* Country Filter */}
+        <div className="pt-2 space-y-2 relative">
+          <div className="flex items-center justify-between text-xs font-mono text-slate-300">
+            <label className="font-semibold flex items-center gap-1">
+              <Globe className="w-3.5 h-3.5 text-slate-400" /> Countries
+            </label>
+            {(filters.countries?.length || 0) > 0 && (
+              <button
+                onClick={handleClearCountries}
+                className="text-[10px] bg-slate-800 hover:bg-slate-700 text-slate-300 px-1.5 py-0.5 rounded transition-colors flex items-center gap-0.5"
+              >
+                <X className="w-3 h-3" /> Clear
+              </button>
+            )}
+          </div>
+
+          <button
+            onClick={() => setIsCountryDropdownOpen(!isCountryDropdownOpen)}
+            className="w-full flex items-center justify-between px-3 py-2 bg-slate-900 border border-slate-800 hover:border-slate-700 rounded-lg text-xs text-slate-300 transition-colors font-mono"
+          >
+            <span className="truncate">
+              {isLoadingCountries ? 'Loading...' :
+                (filters.countries?.length || 0) > 0
+                  ? `${filters.countries!.length} selected`
+                  : 'All Countries'}
+            </span>
+            <ChevronDown className={`w-4 h-4 text-slate-500 transition-transform ${isCountryDropdownOpen ? 'rotate-180' : ''}`} />
+          </button>
+
+          {isCountryDropdownOpen && (
+            <div className="absolute top-full left-0 right-0 mt-1 max-h-48 overflow-y-auto bg-slate-900 border border-slate-700 rounded-lg shadow-xl z-50 p-1 font-mono text-xs scrollbar-thin scrollbar-thumb-slate-700 scrollbar-track-transparent">
+              {availableCountries.length === 0 && !isLoadingCountries ? (
+                <div className="p-2 text-slate-500 text-center">No countries available</div>
+              ) : (
+                availableCountries.map(code => (
+                  <label key={code} className="flex items-center gap-2 p-2 hover:bg-slate-800 rounded cursor-pointer transition-colors group">
+                    <input
+                      type="checkbox"
+                      checked={(filters.countries || []).includes(code)}
+                      onChange={() => handleCountryToggle(code)}
+                      className="w-3.5 h-3.5 rounded border-slate-700 text-blue-500 bg-slate-950 focus:ring-blue-500/20 focus:ring-offset-slate-900"
+                    />
+                    <span className="text-slate-300 group-hover:text-slate-100 flex-1 truncate">
+                      {getCountryName(code)}
+                    </span>
+                    <span className="text-slate-600 uppercase text-[9px]">{code}</span>
+                  </label>
+                ))
+              )}
+            </div>
+          )}
         </div>
       </div>
 
