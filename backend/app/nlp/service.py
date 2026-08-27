@@ -61,7 +61,8 @@ class NLPService:
                             name=loc_text,
                             lat=geo_res[0],
                             lng=geo_res[1],
-                            confidence="high" # Simple heuristic for MVP
+                            confidence="high", # Simple heuristic for MVP
+                            country_code=geo_res[2] if len(geo_res) > 2 else None
                         ))
                     else:
                         locations.append(Location(

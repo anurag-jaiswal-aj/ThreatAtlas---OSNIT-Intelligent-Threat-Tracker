@@ -112,9 +112,11 @@ class IntelligenceService:
             # Construct Event Location
             location_name = None
             geo_location = None
+            country_code = None
             if nlp_result.locations:
                 primary_loc = nlp_result.locations[0]
                 location_name = primary_loc.name
+                country_code = primary_loc.country_code
                 if primary_loc.lat != 0.0 or primary_loc.lng != 0.0:
                     # GeoJSON is [lng, lat]
                     geo_location = GeoJSONPoint(coordinates=[primary_loc.lng, primary_loc.lat])
@@ -151,6 +153,7 @@ class IntelligenceService:
                 entities=entities_dict,
                 location_name=location_name,
                 location=geo_location,
+                country_code=country_code,
                 event_timestamp=raw_post.original_timestamp,
                 threat_score=threat_score,
                 threat_level=threat_level,

@@ -185,16 +185,42 @@ def test_feed_registry_sources_exist():
         "UK MOD / Security Announcements"
     ]
     feed_names = [feed.name for feed in DEFAULT_RSS_FEEDS]
-    
+
     for expected in expected_feeds:
         assert expected in feed_names
-        
+
         feed_config = next(f for f in DEFAULT_RSS_FEEDS if f.name == expected)
         assert feed_config.url.strip() != ""
-        
+
         mapped_key = expected.lower()
         assert mapped_key in SOURCE_RELIABILITY_MAP
         assert SOURCE_RELIABILITY_MAP[mapped_key] != DEFAULT_SOURCE_RELIABILITY
+
+
+def test_credibility_defense_corroboration_bonus():
+    # 1. Single source gives base score
+    single_score, single_breakdown = calculate_credibility_score(["defense news"])
+    assert single_score == 85.0
+    assert single_breakdown["independent_source_count"] == 1
+    assert single_breakdown["corroboration_bonus"] == 0.0
+
+    # 2. Two distinct defense feeds give corroboration bonus without hitting the 100 ceiling
+    sources = [
+        "defense news",
+        "us naval institute news"
+    ]
+    multi_score, multi_breakdown = calculate_credibility_score(sources)
+
+    expected_base = max(SOURCE_RELIABILITY_MAP[src] for src in sources)
+    expected_bonus = 10.0  # For 2 independent sources
+
+    assert multi_breakdown["independent_source_count"] == 2
+    assert multi_breakdown["max_base_source_reliability"] == expected_base
+    assert multi_breakdown["corroboration_bonus"] == expected_bonus
+
+    # Prove that the final score explicitly incorporates the bonus (85.0 + 10.0 = 95.0)
+    assert multi_score == expected_base + expected_bonus
+    assert multi_score == 95.0
 
 
 # ==========================================
@@ -244,7 +270,7 @@ def test_clustering_case_2_different_sources_same_location_time_event(base_time)
         lat=48.8566,
         lng=2.3522,
     )
-    
+
     nlp_res = NLPResult(
         original_text="Al Jazeera: Blast hits Paris near Eiffel Tower.",
         cleaned_text="Al Jazeera: Blast hits Paris near Eiffel Tower.",
@@ -254,14 +280,14 @@ def test_clustering_case_2_different_sources_same_location_time_event(base_time)
         equipment=[],
         event_types=["explosion"],
     )
-    
+
     match = find_best_matching_event(
         post_text="Al Jazeera: Blast hits Paris near Eiffel Tower.",
         post_time=base_time + timedelta(minutes=30),
         nlp_result=nlp_res,
         candidate_events=[event],
     )
-    
+
     assert match is not None
     matched_evt, match_score = match
     assert matched_evt.id == event.id
@@ -277,7 +303,7 @@ def test_clustering_case_3_different_locations(base_time):
         lat=48.8566,
         lng=2.3522,
     )
-    
+
     # Location is Berlin (~878 km away from Paris)
     nlp_res_berlin = NLPResult(
         original_text="Explosion in Berlin.",
@@ -288,14 +314,14 @@ def test_clustering_case_3_different_locations(base_time):
         equipment=[],
         event_types=["explosion"],
     )
-    
+
     match = find_best_matching_event(
         post_text="Explosion in Berlin.",
         post_time=base_time,
         nlp_result=nlp_res_berlin,
         candidate_events=[event_paris],
     )
-    
+
     assert match is None
 
 def test_clustering_case_4_far_apart_in_time(base_time):
@@ -308,7 +334,7 @@ def test_clustering_case_4_far_apart_in_time(base_time):
         lat=48.8566,
         lng=2.3522,
     )
-    
+
     nlp_res = NLPResult(
         original_text="Explosion in Paris.",
         cleaned_text="Explosion in Paris.",
@@ -318,14 +344,14 @@ def test_clustering_case_4_far_apart_in_time(base_time):
         equipment=[],
         event_types=["explosion"],
     )
-    
+
     match = find_best_matching_event(
         post_text="Explosion in Paris.",
         post_time=base_time + timedelta(hours=48),  # 48 hours later
         nlp_result=nlp_res,
         candidate_events=[event],
     )
-    
+
     assert match is None
 
 def test_clustering_case_5_similar_text_unrelated_locations(base_time):
@@ -339,7 +365,7 @@ def test_clustering_case_5_similar_text_unrelated_locations(base_time):
         lng=2.3522,
         equipment=["drone"],
     )
-    
+
     nlp_res_lyon = NLPResult(
         original_text="Protest erupts in Lyon center with drone surveillance",
         cleaned_text="Protest erupts in Lyon center with drone surveillance",
@@ -349,14 +375,14 @@ def test_clustering_case_5_similar_text_unrelated_locations(base_time):
         equipment=["drone"],
         event_types=["protest"],
     )
-    
+
     match = find_best_matching_event(
         post_text="Protest erupts in Lyon center with drone surveillance",
         post_time=base_time,
         nlp_result=nlp_res_lyon,
         candidate_events=[event],
     )
-    
+
     assert match is None  # Must not merge due to >50km distance constraint
 
 def test_clustering_determinism(base_time):
@@ -378,10 +404,10 @@ def test_clustering_determinism(base_time):
         equipment=[],
         event_types=["explosion"],
     )
-    
+
     res1 = find_best_matching_event("Explosion reported near Eiffel Tower in Paris.", base_time, nlp_res, [event])
     res2 = find_best_matching_event("Explosion reported near Eiffel Tower in Paris.", base_time, nlp_res, [event])
-    
+
     assert res1 is not None and res2 is not None
     assert res1[0].id == res2[0].id
     assert res1[1] == res2[1]

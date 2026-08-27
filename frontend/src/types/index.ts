@@ -40,6 +40,7 @@ export interface Event {
   entities: EventEntities;
   location_name?: string;
   location?: GeoJSONPoint;
+  country_code?: string;
   event_timestamp: string;
   threat_score: number;
   threat_level: 'Low' | 'Medium' | 'High';
@@ -100,4 +101,5 @@ export interface EventFilters {
   search?: string;
   event_type?: string;
   bbox?: string;
+  countries?: string[];
 }
