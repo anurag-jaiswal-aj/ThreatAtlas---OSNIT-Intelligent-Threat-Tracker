@@ -31,6 +31,15 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
     onFilterChange({ ...filters, threat_level: level });
   };
 
+  const handleMinThreatScoreChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    onFilterChange({ ...filters, min_threat_score: Number(e.target.value) });
+  };
+
+  const handleToggleHideLowThreat = () => {
+    const isHidden = filters.min_threat_score === 40;
+    onFilterChange({ ...filters, min_threat_score: isHidden ? undefined : 40 });
+  };
+
   return (
     <aside className="w-96 bg-slate-950/95 border-r border-slate-800/80 flex flex-col h-[calc(100vh-4rem)] z-20 backdrop-blur-md select-none">
       {/* Search & Filter Header */}
@@ -88,6 +97,37 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
           >
             Low ({lowCount})
           </button>
+        </div>
+
+        {/* Minimum Threat Score Slider */}
+        <div className="pt-2 space-y-2">
+          <div className="flex items-center justify-between text-xs font-mono text-slate-300">
+            <label htmlFor="minThreatScoreSlider" className="font-semibold">
+              Min Threat Score: {filters.min_threat_score ?? 0}
+            </label>
+            <button
+              onClick={handleToggleHideLowThreat}
+              aria-pressed={filters.min_threat_score === 40}
+              className={`px-2 py-1 rounded transition-colors ${
+                filters.min_threat_score === 40
+                  ? 'bg-blue-600 hover:bg-blue-500 text-white'
+                  : 'bg-slate-800 hover:bg-slate-700 text-slate-300'
+              }`}
+            >
+              Hide Low Threat (&lt;40)
+            </button>
+          </div>
+          <input
+            id="minThreatScoreSlider"
+            type="range"
+            min="0"
+            max="100"
+            step="5"
+            value={filters.min_threat_score ?? 0}
+            onChange={handleMinThreatScoreChange}
+            aria-label="Minimum Threat Score"
+            className="w-full accent-blue-500 h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer"
+          />
         </div>
       </div>
 
