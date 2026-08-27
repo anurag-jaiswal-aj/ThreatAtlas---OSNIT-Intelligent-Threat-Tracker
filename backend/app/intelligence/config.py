@@ -44,6 +44,11 @@ SOURCE_RELIABILITY_MAP: Dict[str, float] = {
     "al jazeera": 85.0,
     "un news": 85.0,
     "telegram": 50.0,
+    "defense news": 85.0,
+    "reuters world": 90.0,
+    "reliefweb crisis reports": 90.0,
+    "us naval institute news": 85.0,
+    "uk mod / security announcements": 90.0,
 }
 DEFAULT_SOURCE_RELIABILITY: float = 60.0
 

@@ -10,6 +10,8 @@ from app.intelligence.clustering import (
     find_best_matching_event,
     haversine_distance_km,
 )
+from app.ingestion.config import DEFAULT_RSS_FEEDS
+from app.intelligence.config import SOURCE_RELIABILITY_MAP, DEFAULT_SOURCE_RELIABILITY
 
 # ==========================================
 # 1. THREAT SCORING TESTS
@@ -124,6 +126,39 @@ def test_credibility_reliable_vs_low_reliability():
     score_low, _ = calculate_credibility_score(["telegram"])
     assert score_rel > score_low
     assert score_low == 50.0  # Base for telegram
+
+def test_credibility_new_defense_sources():
+    sources = [
+        "defense news",
+        "reuters world",
+        "reliefweb crisis reports",
+        "us naval institute news",
+        "uk mod / security announcements"
+    ]
+    for source in sources:
+        score, _ = calculate_credibility_score([source])
+        assert score == SOURCE_RELIABILITY_MAP[source]
+        assert score != DEFAULT_SOURCE_RELIABILITY
+
+def test_feed_registry_sources_exist():
+    expected_feeds = [
+        "Defense News",
+        "Reuters World",
+        "ReliefWeb Crisis Reports",
+        "US Naval Institute News",
+        "UK MOD / Security Announcements"
+    ]
+    feed_names = [feed.name for feed in DEFAULT_RSS_FEEDS]
+    
+    for expected in expected_feeds:
+        assert expected in feed_names
+        
+        feed_config = next(f for f in DEFAULT_RSS_FEEDS if f.name == expected)
+        assert feed_config.url.strip() != ""
+        
+        mapped_key = expected.lower()
+        assert mapped_key in SOURCE_RELIABILITY_MAP
+        assert SOURCE_RELIABILITY_MAP[mapped_key] != DEFAULT_SOURCE_RELIABILITY
 
 
 # ==========================================

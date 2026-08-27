@@ -24,4 +24,24 @@ DEFAULT_RSS_FEEDS: List[RSSFeedConfig] = [
         name="UN News",
         url="https://news.un.org/feed/subscribe/en/news/all/rss.xml",
     ),
+    RSSFeedConfig(
+        name="Defense News",
+        url="https://www.defensenews.com/arc/outboundfeeds/rss/",
+    ),
+    RSSFeedConfig(
+        name="Reuters World",
+        url="https://www.reutersagency.com/feed/?best-topics=world-news",
+    ),
+    RSSFeedConfig(
+        name="ReliefWeb Crisis Reports",
+        url="https://reliefweb.int/updates/rss.xml",
+    ),
+    RSSFeedConfig(
+        name="US Naval Institute News",
+        url="https://news.usni.org/feed",
+    ),
+    RSSFeedConfig(
+        name="UK MOD / Security Announcements",
+        url="https://www.gov.uk/government/organisations/ministry-of-defence.atom",
+    ),
 ]
