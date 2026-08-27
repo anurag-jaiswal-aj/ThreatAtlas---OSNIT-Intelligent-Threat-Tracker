@@ -103,3 +103,18 @@ export interface EventFilters {
   bbox?: string;
   countries?: string[];
 }
+
+export interface WebhookAlert {
+  id: string;
+  url: string;
+  provider: 'discord' | 'slack' | 'generic';
+  is_active: boolean;
+  min_threat_level: 'High' | 'Critical';
+  countries?: string[];
+  bbox?: [[number, number], [number, number]];
+  created_at: string;
+  updated_at: string;
+}
+
+export type WebhookAlertCreate = Omit<WebhookAlert, 'id' | 'created_at' | 'updated_at'>;
+export type WebhookAlertUpdate = Partial<WebhookAlertCreate>;

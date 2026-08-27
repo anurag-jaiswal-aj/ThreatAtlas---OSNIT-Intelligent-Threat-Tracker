@@ -92,11 +92,21 @@ async def init_db() -> None:
         ),
     ]
 
+    # Webhooks Collection Indexes
+    webhooks_indexes = [
+        IndexModel(
+            [("is_active", ASCENDING)],
+            name="idx_webhooks_is_active",
+        ),
+    ]
+
     try:
         logger.info("Creating indexes for raw_posts collection...")
         await db.raw_posts.create_indexes(raw_posts_indexes)
         logger.info("Creating indexes for events collection...")
         await db.events.create_indexes(events_indexes)
+        logger.info("Creating indexes for webhooks collection...")
+        await db.webhooks.create_indexes(webhooks_indexes)
         logger.info("MongoDB indexes created successfully.")
     except Exception as e:
         logger.warning("Index creation notice/warning: %s", str(e))
