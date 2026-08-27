@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Search, AlertTriangle, ShieldAlert, ShieldCheck, MapPin, Calendar, Globe, X, ChevronDown } from 'lucide-react';
 import type { Event, EventFilters, EventGlobalMetrics } from '../types';
-import { fetchAvailableCountries } from '../api/client';
+import { fetchAvailableCountries, exportEvents } from '../api/client';
 
 interface FilterPanelProps {
   filters: EventFilters;
@@ -23,6 +23,19 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
   const [availableCountries, setAvailableCountries] = useState<string[]>([]);
   const [isLoadingCountries, setIsLoadingCountries] = useState(false);
   const [isCountryDropdownOpen, setIsCountryDropdownOpen] = useState(false);
+  const [isExporting, setIsExporting] = useState(false);
+
+  const handleExport = async (format: 'pdf' | 'stix') => {
+    setIsExporting(true);
+    try {
+      await exportEvents(filters, format);
+    } catch (err) {
+      console.error('Failed to export events:', err);
+      alert('Failed to export events. Please try again.');
+    } finally {
+      setIsExporting(false);
+    }
+  };
 
   useEffect(() => {
     const loadCountries = async () => {
@@ -225,6 +238,24 @@ export const FilterPanel: React.FC<FilterPanelProps> = ({
               )}
             </div>
           )}
+        </div>
+
+        {/* Export Controls */}
+        <div className="pt-2 flex gap-2">
+          <button
+            onClick={() => handleExport('pdf')}
+            disabled={isExporting}
+            className="flex-1 py-1.5 bg-slate-800 hover:bg-slate-700 disabled:bg-slate-900 disabled:text-slate-600 border border-slate-700 rounded text-xs text-slate-200 font-mono transition-colors"
+          >
+            {isExporting ? 'Exporting...' : 'Export PDF'}
+          </button>
+          <button
+            onClick={() => handleExport('stix')}
+            disabled={isExporting}
+            className="flex-1 py-1.5 bg-slate-800 hover:bg-slate-700 disabled:bg-slate-900 disabled:text-slate-600 border border-slate-700 rounded text-xs text-slate-200 font-mono transition-colors"
+          >
+            {isExporting ? 'Exporting...' : 'Export STIX'}
+          </button>
         </div>
       </div>
 
