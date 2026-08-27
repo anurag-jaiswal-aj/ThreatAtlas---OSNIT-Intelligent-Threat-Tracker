@@ -151,6 +151,7 @@ def test_process_pending_intelligence_flow(mocker):
 
     mock_nlp_result = MagicMock()
     mocker.patch("app.api.v1.endpoints.intelligence.nlp_service.process_text", AsyncMock(return_value=mock_nlp_result))
+    mocker.patch("app.api.v1.endpoints.intelligence.is_post_relevant", return_value=True)
     mocker.patch(
         "app.api.v1.endpoints.intelligence.intelligence_service.process_post",
         AsyncMock(return_value={"action": "created", "event_id": str(ObjectId())}),
@@ -162,7 +163,51 @@ def test_process_pending_intelligence_flow(mocker):
     assert data["processed_count"] == 1
     assert data["events_created"] == 1
     assert data["events_merged"] == 0
+    assert data["events_ignored"] == 0
     assert data["errors"] == 0
+
+
+def test_process_pending_irrelevant_post(mocker):
+    """Test POST /api/v1/intelligence/process-pending ignores irrelevant posts."""
+    now = utc_now()
+    post_id = str(ObjectId())
+    pending_post = RawPostResponse(
+        id=post_id,
+        source="rss",
+        source_specific_id="guid-202",
+        text="The local library is hosting a bake sale in Paris.",
+        original_timestamp=now,
+        collected_at=now,
+        processing_status="pending",
+        created_at=now,
+        updated_at=now,
+    )
+
+    mocker.patch("app.api.v1.endpoints.intelligence.get_database", return_value=MagicMock())
+    mocker.patch("app.api.v1.endpoints.intelligence.RawPostRepository.list_pending", AsyncMock(return_value=[pending_post]))
+    mock_update = mocker.patch("app.api.v1.endpoints.intelligence.RawPostRepository.update_status", AsyncMock(return_value=True))
+
+    mock_nlp_result = MagicMock()
+    mocker.patch("app.api.v1.endpoints.intelligence.nlp_service.process_text", AsyncMock(return_value=mock_nlp_result))
+    mocker.patch("app.api.v1.endpoints.intelligence.is_post_relevant", return_value=False)
+    
+    mock_process_post = mocker.patch(
+        "app.api.v1.endpoints.intelligence.intelligence_service.process_post",
+        AsyncMock()
+    )
+
+    response = client.post("/api/v1/intelligence/process-pending")
+    assert response.status_code == 200
+    data = response.json()
+    assert data["processed_count"] == 1
+    assert data["events_created"] == 0
+    assert data["events_merged"] == 0
+    assert data["events_ignored"] == 1
+    assert data["errors"] == 0
+    
+    mock_update.assert_called_with(post_id, "ignored")
+    mock_process_post.assert_not_called()
+
 
 
 def test_get_global_metrics_endpoint(mocker):

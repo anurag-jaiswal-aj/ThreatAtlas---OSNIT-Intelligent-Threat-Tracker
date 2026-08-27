@@ -23,30 +23,7 @@ def calculate_threat_score(
     - Location sensitivity (max 20)
     - Frequency / Corroboration bonus (max 20)
     """
-    # 1. Action / Event Score
-    action_score = 0.0
-    found_actions = set(nlp_result.event_types)
-    
-    # Also check text for action keywords in case NER missed explicit label
-    lower_text = nlp_result.cleaned_text.lower()
-    for kw, weight in ACTION_WEIGHTS.items():
-        if kw in lower_text:
-            found_actions.add(kw)
-            
-    if found_actions:
-        action_score = max(ACTION_WEIGHTS.get(act.lower(), DEFAULT_ACTION_WEIGHT) for act in found_actions)
-    action_score = min(35.0, action_score)
-
-    # 2. Equipment Impact Score
-    equipment_score = 0.0
-    found_eq = set(nlp_result.equipment)
-    for kw, weight in EQUIPMENT_WEIGHTS.items():
-        if kw.lower() in lower_text:
-            found_eq.add(kw)
-            
-    if found_eq:
-        equipment_score = sum(EQUIPMENT_WEIGHTS.get(eq, DEFAULT_EQUIPMENT_WEIGHT) for eq in found_eq)
-    equipment_score = min(25.0, equipment_score)
+    action_score, equipment_score = _get_action_and_equipment_scores(nlp_result)
 
     # 3. Location Sensitivity Score
     location_score = DEFAULT_LOCATION_SENSITIVITY
@@ -82,3 +59,42 @@ def calculate_threat_score(
     }
 
     return total_score, threat_level, breakdown
+
+
+def _get_action_and_equipment_scores(nlp_result: NLPResult) -> Tuple[float, float]:
+    """Extract action and equipment keywords and calculate their partial scores."""
+    # 1. Action / Event Score
+    action_score = 0.0
+    found_actions = set(nlp_result.event_types)
+    
+    # Also check text for action keywords in case NER missed explicit label
+    lower_text = nlp_result.cleaned_text.lower()
+    for kw, weight in ACTION_WEIGHTS.items():
+        if kw in lower_text:
+            found_actions.add(kw)
+            
+    if found_actions:
+        action_score = max(ACTION_WEIGHTS.get(act.lower(), DEFAULT_ACTION_WEIGHT) for act in found_actions)
+    action_score = min(35.0, action_score)
+
+    # 2. Equipment Impact Score
+    equipment_score = 0.0
+    found_eq = set(nlp_result.equipment)
+    for kw, weight in EQUIPMENT_WEIGHTS.items():
+        if kw.lower() in lower_text:
+            found_eq.add(kw)
+            
+    if found_eq:
+        equipment_score = sum(EQUIPMENT_WEIGHTS.get(eq, DEFAULT_EQUIPMENT_WEIGHT) for eq in found_eq)
+    equipment_score = min(25.0, equipment_score)
+
+    return action_score, equipment_score
+
+
+def is_post_relevant(nlp_result: NLPResult) -> bool:
+    """
+    Determines if a post is threat-relevant.
+    A post is relevant if and only if there is a non-zero action or equipment score.
+    """
+    action_score, equipment_score = _get_action_and_equipment_scores(nlp_result)
+    return action_score > 0 or equipment_score > 0

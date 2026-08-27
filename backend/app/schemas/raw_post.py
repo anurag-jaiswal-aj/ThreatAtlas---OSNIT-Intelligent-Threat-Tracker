@@ -25,7 +25,7 @@ class RawPostBase(BaseModel):
 
 class RawPostCreate(RawPostBase):
     collected_at: datetime = Field(default_factory=utc_now)
-    processing_status: str = Field(default="pending", description="Processing status: pending, processed, failed, duplicate")
+    processing_status: str = Field(default="pending", description="Processing status: pending, processed, failed, duplicate, ignored")
 
     @field_validator("collected_at", mode="before")
     @classmethod
