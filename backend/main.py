@@ -18,6 +18,10 @@ async def lifespan(app: FastAPI):
     try:
         await connect_to_mongo()
         await init_db()
+
+        # Start background task scheduler ONLY after DB is ready
+        from app.worker import start_scheduler
+        start_scheduler()
     except Exception as exc:
         logger.warning("MongoDB initial connection notice: %s. Application continuing startup.", str(exc))
 
@@ -27,6 +31,14 @@ async def lifespan(app: FastAPI):
     yield
 
     logger.info("Shutting down %s...", settings.PROJECT_NAME)
+
+    # Stop the scheduler cleanly
+    from app.worker import stop_scheduler
+    try:
+        stop_scheduler()
+    except Exception as e:
+        logger.warning("Error stopping scheduler: %s", str(e))
+
     redis_task.cancel()
     try:
         await redis_task

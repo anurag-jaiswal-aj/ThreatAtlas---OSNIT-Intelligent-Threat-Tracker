@@ -146,14 +146,14 @@ def test_process_pending_intelligence_flow(mocker):
     )
 
     mocker.patch("app.api.v1.endpoints.intelligence.get_database", return_value=MagicMock())
-    mocker.patch("app.api.v1.endpoints.intelligence.RawPostRepository.list_pending", AsyncMock(return_value=[pending_post]))
-    mocker.patch("app.api.v1.endpoints.intelligence.RawPostRepository.update_status", AsyncMock(return_value=True))
+    mocker.patch("app.intelligence.service.RawPostRepository.list_pending", AsyncMock(return_value=[pending_post]))
+    mocker.patch("app.intelligence.service.RawPostRepository.update_status", AsyncMock(return_value=True))
 
     mock_nlp_result = MagicMock()
-    mocker.patch("app.api.v1.endpoints.intelligence.nlp_service.process_text", AsyncMock(return_value=mock_nlp_result))
-    mocker.patch("app.api.v1.endpoints.intelligence.is_post_relevant", return_value=True)
+    mocker.patch("app.intelligence.service.nlp_service.process_text", AsyncMock(return_value=mock_nlp_result))
+    mocker.patch("app.intelligence.service.is_post_relevant", return_value=True)
     mocker.patch(
-        "app.api.v1.endpoints.intelligence.intelligence_service.process_post",
+        "app.intelligence.service.IntelligenceService.process_post",
         AsyncMock(return_value={"action": "created", "event_id": str(ObjectId())}),
     )
 
@@ -184,15 +184,15 @@ def test_process_pending_irrelevant_post(mocker):
     )
 
     mocker.patch("app.api.v1.endpoints.intelligence.get_database", return_value=MagicMock())
-    mocker.patch("app.api.v1.endpoints.intelligence.RawPostRepository.list_pending", AsyncMock(return_value=[pending_post]))
-    mock_update = mocker.patch("app.api.v1.endpoints.intelligence.RawPostRepository.update_status", AsyncMock(return_value=True))
+    mocker.patch("app.intelligence.service.RawPostRepository.list_pending", AsyncMock(return_value=[pending_post]))
+    mock_update = mocker.patch("app.intelligence.service.RawPostRepository.update_status", AsyncMock(return_value=True))
 
     mock_nlp_result = MagicMock()
-    mocker.patch("app.api.v1.endpoints.intelligence.nlp_service.process_text", AsyncMock(return_value=mock_nlp_result))
-    mocker.patch("app.api.v1.endpoints.intelligence.is_post_relevant", return_value=False)
+    mocker.patch("app.intelligence.service.nlp_service.process_text", AsyncMock(return_value=mock_nlp_result))
+    mocker.patch("app.intelligence.service.is_post_relevant", return_value=False)
     
     mock_process_post = mocker.patch(
-        "app.api.v1.endpoints.intelligence.intelligence_service.process_post",
+        "app.intelligence.service.IntelligenceService.process_post",
         AsyncMock()
     )
 

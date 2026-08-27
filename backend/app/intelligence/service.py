@@ -7,7 +7,7 @@ from app.schemas.event import EventCreate, EventResponse, EventUpdate
 from app.schemas.raw_post import RawPostResponse
 from app.db.repositories.event import EventRepository
 from app.db.repositories.raw_post import RawPostRepository
-from app.intelligence.threat_scorer import calculate_threat_score
+from app.intelligence.threat_scorer import calculate_threat_score, is_post_relevant
 from app.intelligence.credibility_scorer import calculate_credibility_score
 from app.intelligence.clustering import find_best_matching_event
 from app.core.redis import publish_event
@@ -49,7 +49,7 @@ class IntelligenceService:
         if match_result:
             matched_event, match_score = match_result
             logger.info("Merging RawPost %s into existing Event %s (score: %.4f)", raw_post.id, matched_event.id, match_score)
-            
+
             # Merge raw_post_ids and source_ids
             updated_post_ids = list(set(matched_event.raw_post_ids + [raw_post.id]))
             updated_source_ids = list(set(matched_event.source_ids + [raw_post.source]))
@@ -60,7 +60,7 @@ class IntelligenceService:
             loc_set = set(existing_entities.get("locations", [])) | set(loc.name for loc in nlp_result.locations)
             org_set = set(existing_entities.get("organizations", [])) | set(nlp_result.organizations)
             eq_set = set(existing_entities.get("equipment", [])) | set(nlp_result.equipment)
-            
+
             merged_entities = {
                 "locations": list(loc_set),
                 "organizations": list(org_set),
@@ -108,7 +108,7 @@ class IntelligenceService:
 
         else:
             logger.info("No matching event found for RawPost %s. Creating new Event.", raw_post.id)
-            
+
             # Construct Event Location
             location_name = None
             geo_location = None
@@ -176,5 +176,59 @@ class IntelligenceService:
                 "event": created_event,
             }
 
+
+    async def process_pending_batch(self, db, limit: int = 100) -> dict:
+        """
+        Executes the end-to-end processing pipeline on pending RawPosts.
+        Returns a dict of statistics.
+        """
+        from app.db.repositories.raw_post import RawPostRepository
+        from app.db.repositories.event import EventRepository
+
+        raw_post_repo = RawPostRepository(db)
+        event_repo = EventRepository(db)
+
+        pending_posts = await raw_post_repo.list_pending(limit=limit)
+        stats = {
+            "processed_count": 0,
+            "events_created": 0,
+            "events_merged": 0,
+            "events_ignored": 0,
+            "errors": 0,
+        }
+
+        if not pending_posts:
+            return stats
+
+        for post in pending_posts:
+            try:
+                nlp_result = await nlp_service.process_text(post.text)
+
+                if not is_post_relevant(nlp_result):
+                    logger.info("RawPost %s deemed irrelevant. Ignoring.", post.id)
+                    await raw_post_repo.update_status(post.id, "ignored")
+                    stats["events_ignored"] += 1
+                    stats["processed_count"] += 1
+                    continue
+
+                result = await self.process_post(
+                    raw_post=post,
+                    event_repo=event_repo,
+                    nlp_result=nlp_result,
+                    raw_post_repo=raw_post_repo,
+                )
+
+                stats["processed_count"] += 1
+                if result.get("action") == "created":
+                    stats["events_created"] += 1
+                elif result.get("action") == "merged":
+                    stats["events_merged"] += 1
+
+            except Exception as exc:
+                logger.error("Error processing RawPost %s: %s", post.id, exc, exc_info=True)
+                stats["errors"] += 1
+                await raw_post_repo.update_status(post.id, "failed")
+
+        return stats
 
 intelligence_service = IntelligenceService()
