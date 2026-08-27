@@ -13,6 +13,7 @@ export const App: React.FC = () => {
   const [filters, setFilters] = useState<EventFilters>({});
   const [events, setEvents] = useState<Event[]>([]);
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
+  const [showHeatmap, setShowHeatmap] = useState<boolean>(false);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [liveToast, setLiveToast] = useState<{ message: string; threatLevel: string } | null>(null);
@@ -116,6 +117,8 @@ export const App: React.FC = () => {
           selectedEvent={selectedEvent}
           onSelectEvent={setSelectedEvent}
           globalMetrics={globalMetrics}
+          showHeatmap={showHeatmap}
+          onHeatmapToggle={() => setShowHeatmap((prev) => !prev)}
         />
 
         {/* Center 3D Globe Viewer */}
@@ -160,6 +163,7 @@ export const App: React.FC = () => {
             events={events}
             selectedEvent={selectedEvent}
             onSelectEvent={setSelectedEvent}
+            showHeatmap={showHeatmap}
           />
         </main>
 
