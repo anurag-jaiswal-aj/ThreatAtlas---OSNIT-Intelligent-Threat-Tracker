@@ -1,8 +1,9 @@
-import React, { useEffect, useState, useCallback } from 'react';
+import React, { useEffect, useState, useCallback, useMemo } from 'react';
 import { Header } from './components/Header';
 import { FilterPanel } from './components/FilterPanel';
 import { GlobeViewer } from './components/GlobeViewer';
 import { EventDetailDrawer } from './components/EventDetailDrawer';
+import { PlaybackSlider } from './components/PlaybackSlider';
 import { checkHealth, fetchEvents, fetchGlobalMetrics } from './api/client';
 import { wsService } from './api/websocket';
 import type { Event, EventFilters, EventGlobalMetrics } from './types';
@@ -11,9 +12,11 @@ import { AlertCircle, RefreshCw, Zap, X } from 'lucide-react';
 export const App: React.FC = () => {
   const [isOnline, setIsOnline] = useState<boolean>(true);
   const [filters, setFilters] = useState<EventFilters>({});
-  const [events, setEvents] = useState<Event[]>([]);
+  const [events, setEvents] = useState<Event[]>([]); // Normal dashboard events (default limit)
+  const [playbackEvents, setPlaybackEvents] = useState<Event[]>([]); // Bounded large dataset for playback
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
   const [showHeatmap, setShowHeatmap] = useState<boolean>(false);
+  const [playbackTime, setPlaybackTime] = useState<number | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [liveToast, setLiveToast] = useState<{ message: string; threatLevel: string } | null>(null);
@@ -23,6 +26,21 @@ export const App: React.FC = () => {
     medium: 0,
     low: 0,
   });
+
+  // Derived visible events based on temporal playback
+  const visibleEvents = useMemo(() => {
+    if (playbackTime === null) return events;
+    return playbackEvents.filter(e => new Date(e.event_timestamp).getTime() <= playbackTime);
+  }, [events, playbackEvents, playbackTime]);
+
+  // When selected event becomes hidden by playback, clear selection
+  useEffect(() => {
+    if (selectedEvent && playbackTime !== null) {
+      if (new Date(selectedEvent.event_timestamp).getTime() > playbackTime) {
+        setSelectedEvent(null);
+      }
+    }
+  }, [playbackTime, selectedEvent]);
 
   // Load global metrics from API
   const loadMetrics = useCallback(async () => {
@@ -42,8 +60,13 @@ export const App: React.FC = () => {
       const healthy = await checkHealth();
       setIsOnline(healthy);
 
+      // Fetch normal dashboard events
       const res = await fetchEvents(filters);
       setEvents(res.items);
+
+      // Fetch a bounded large dataset for complete historical playback (Issue #18)
+      const playbackRes = await fetchEvents(filters, 10000);
+      setPlaybackEvents(playbackRes.items);
     } catch (err: any) {
       console.error('Failed to load events:', err);
       setIsOnline(false);
@@ -113,7 +136,7 @@ export const App: React.FC = () => {
         <FilterPanel
           filters={filters}
           onFilterChange={setFilters}
-          events={events}
+          events={playbackTime === null ? events : visibleEvents.slice(0, 100)}
           selectedEvent={selectedEvent}
           onSelectEvent={setSelectedEvent}
           globalMetrics={globalMetrics}
@@ -160,10 +183,16 @@ export const App: React.FC = () => {
 
           {/* Cesium Globe */}
           <GlobeViewer
-            events={events}
+            events={visibleEvents}
             selectedEvent={selectedEvent}
             onSelectEvent={setSelectedEvent}
             showHeatmap={showHeatmap}
+          />
+          {/* Temporal Playback Slider */}
+          <PlaybackSlider
+            events={playbackEvents} // Pass full filtered dataset to calculate range
+            playbackTime={playbackTime}
+            setPlaybackTime={setPlaybackTime}
           />
         </main>
 

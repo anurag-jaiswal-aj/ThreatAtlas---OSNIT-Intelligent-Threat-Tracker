@@ -7,6 +7,9 @@ import type {
   RawPost,
   RawPostListResponse,
   EventGlobalMetrics,
+  WebhookAlert,
+  WebhookAlertCreate,
+  WebhookAlertUpdate,
 } from '../types';
 
 const API_BASE_URL = '/api/v1';
@@ -18,8 +21,8 @@ export const apiClient = axios.create({
   },
 });
 
-export const fetchEvents = async (filters: EventFilters = {}): Promise<EventListResponse> => {
-  const params: Record<string, any> = { limit: 100 };
+export const fetchEvents = async (filters: EventFilters = {}, limit?: number): Promise<EventListResponse> => {
+  const params: Record<string, any> = { limit: limit ?? (filters as any).limit ?? 100 };
   if (filters.threat_level) params.threat_level = filters.threat_level;
   if (filters.min_threat_score) params.min_threat_score = filters.min_threat_score;
   if (filters.search) params.search = filters.search;
@@ -115,4 +118,29 @@ export const checkHealth = async (): Promise<boolean> => {
   } catch (err) {
     return false;
   }
+};
+
+// Webhooks API
+export const fetchWebhooks = async (): Promise<WebhookAlert[]> => {
+  const response = await apiClient.get<WebhookAlert[]>('/webhooks');
+  return response.data;
+};
+
+export const createWebhook = async (data: WebhookAlertCreate): Promise<WebhookAlert> => {
+  const response = await apiClient.post<WebhookAlert>('/webhooks', data);
+  return response.data;
+};
+
+export const updateWebhook = async (id: string, data: WebhookAlertUpdate): Promise<WebhookAlert> => {
+  const response = await apiClient.patch<WebhookAlert>(`/webhooks/${id}`, data);
+  return response.data;
+};
+
+export const deleteWebhook = async (id: string): Promise<void> => {
+  await apiClient.delete(`/webhooks/${id}`);
+};
+
+export const testWebhook = async (id: string): Promise<{ status: string, detail: string }> => {
+  const response = await apiClient.post<{ status: string, detail: string }>(`/webhooks/${id}/test`);
+  return response.data;
 };
