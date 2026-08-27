@@ -3,7 +3,7 @@ import pytest
 from app.nlp.schemas import NLPResult, Entity, Location
 from app.schemas.common import GeoJSONPoint
 from app.schemas.event import EventResponse
-from app.intelligence.threat_scorer import calculate_threat_score
+from app.intelligence.threat_scorer import calculate_threat_score, is_post_relevant
 from app.intelligence.credibility_scorer import calculate_credibility_score
 from app.intelligence.clustering import (
     compute_similarity,
@@ -94,6 +94,42 @@ def test_threat_scoring_clamping():
     score, level, breakdown = calculate_threat_score(nlp_res, corroboration_count=10)
     assert score == 100.0
     assert level == "High"
+
+def test_is_post_relevant_irrelevant():
+    nlp_res = NLPResult(
+        original_text="The local library is hosting a bake sale in Paris.",
+        cleaned_text="The local library is hosting a bake sale in Paris.",
+        entities=[],
+        locations=[Location(name="Paris", lat=48.85, lng=2.35, confidence="high")],
+        organizations=[],
+        equipment=[],
+        event_types=[],
+    )
+    assert is_post_relevant(nlp_res) is False
+
+def test_is_post_relevant_action():
+    nlp_res = NLPResult(
+        original_text="Reports of heavy shelling along the border.",
+        cleaned_text="Reports of heavy shelling along the border.",
+        entities=[],
+        locations=[],
+        organizations=[],
+        equipment=[],
+        event_types=["shelling"],
+    )
+    assert is_post_relevant(nlp_res) is True
+
+def test_is_post_relevant_equipment():
+    nlp_res = NLPResult(
+        original_text="Artillery fire was reported near the facility.",
+        cleaned_text="Artillery fire was reported near the facility.",
+        entities=[],
+        locations=[],
+        organizations=[],
+        equipment=["artillery"],
+        event_types=[],
+    )
+    assert is_post_relevant(nlp_res) is True
 
 
 # ==========================================

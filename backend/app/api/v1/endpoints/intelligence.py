@@ -6,6 +6,7 @@ from app.db.repositories.event import EventRepository
 from app.db.repositories.raw_post import RawPostRepository
 from app.nlp.service import nlp_service
 from app.intelligence.service import intelligence_service
+from app.intelligence.threat_scorer import is_post_relevant
 
 logger = logging.getLogger("threat_atlas.api.intelligence")
 
@@ -16,6 +17,7 @@ class ProcessPendingResponse(BaseModel):
     processed_count: int = Field(..., description="Number of raw posts processed")
     events_created: int = Field(..., description="Number of new events created")
     events_merged: int = Field(..., description="Number of posts merged into existing events")
+    events_ignored: int = Field(..., description="Number of posts ignored because they were not threat-relevant")
     errors: int = Field(..., description="Number of posts that failed during processing")
 
 
@@ -39,17 +41,27 @@ async def process_pending_posts(limit: int = 100):
             processed_count=0,
             events_created=0,
             events_merged=0,
+            events_ignored=0,
             errors=0,
         )
 
     processed_count = 0
     events_created = 0
     events_merged = 0
+    events_ignored = 0
     errors = 0
 
     for post in pending_posts:
         try:
             nlp_result = await nlp_service.process_text(post.text)
+            
+            if not is_post_relevant(nlp_result):
+                logger.info("RawPost %s deemed irrelevant. Ignoring.", post.id)
+                await raw_post_repo.update_status(post.id, "ignored")
+                events_ignored += 1
+                processed_count += 1
+                continue
+
             result = await intelligence_service.process_post(
                 raw_post=post,
                 event_repo=event_repo,
@@ -72,5 +84,6 @@ async def process_pending_posts(limit: int = 100):
         processed_count=processed_count,
         events_created=events_created,
         events_merged=events_merged,
+        events_ignored=events_ignored,
         errors=errors,
     )
