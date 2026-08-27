@@ -91,6 +91,76 @@ async def list_events(
     return EventListResponse(total=total, limit=limit, skip=skip, items=events)
 
 
+@router.get("/export", summary="Export Events to PDF or STIX")
+async def export_events(
+    format: str = Query(..., description="Export format: 'pdf' or 'stix'"),
+    threat_level: Optional[str] = Query(default=None, description="Filter by threat level: Low, Medium, High"),
+    min_threat_score: Optional[float] = Query(default=None, ge=0.0, le=100.0, description="Minimum threat score"),
+    event_type: Optional[str] = Query(default=None, description="Filter by event category"),
+    start_date: Optional[datetime] = Query(default=None, description="Start date (UTC ISO)"),
+    end_date: Optional[datetime] = Query(default=None, description="End date (UTC ISO)"),
+    bbox: Optional[str] = Query(default=None, description="Geospatial bounding box 'min_lon,min_lat,max_lon,max_lat'"),
+    search: Optional[str] = Query(default=None, description="Text search in title or summary"),
+    countries: Optional[str] = Query(default=None, description="Comma-separated ISO country codes (e.g. ua,ru)"),
+):
+    """Export filtered intelligence events to PDF or STIX 2.1 format."""
+    if format not in {"pdf", "stix"}:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Unsupported export format. Use 'pdf' or 'stix'."
+        )
+
+    if threat_level and threat_level not in {"Low", "Medium", "High"}:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid threat_level value. Allowed values: Low, Medium, High.",
+        )
+
+    parsed_bbox = parse_and_validate_bbox(bbox)
+
+    parsed_countries = None
+    if countries:
+        parsed_countries = list({c.strip().lower() for c in countries.split(",") if c.strip()})
+        if not parsed_countries:
+            parsed_countries = None
+
+    db = get_database()
+    event_repo = EventRepository(db)
+
+    # Use a safe absolute limit to prevent OOM
+    events = await event_repo.list_events(
+        limit=10000,
+        skip=0,
+        threat_level=threat_level,
+        min_threat_score=min_threat_score,
+        event_type=event_type,
+        start_date=start_date,
+        end_date=end_date,
+        bbox=parsed_bbox,
+        search=search,
+        countries=parsed_countries,
+    )
+
+    from app.intelligence.export_service import generate_pdf, generate_stix_bundle
+    from fastapi.responses import StreamingResponse
+    import io
+
+    if format == "pdf":
+        pdf_bytes = generate_pdf(events)
+        return StreamingResponse(
+            io.BytesIO(pdf_bytes),
+            media_type="application/pdf",
+            headers={"Content-Disposition": 'attachment; filename="threatatlas_export.pdf"'}
+        )
+    else:
+        stix_bytes = generate_stix_bundle(events)
+        return StreamingResponse(
+            io.BytesIO(stix_bytes),
+            media_type="application/stix+json",
+            headers={"Content-Disposition": 'attachment; filename="threatatlas_export.json"'}
+        )
+
+
 @router.get("/stats", response_model=EventGlobalMetrics, summary="Get Global Event Metrics")
 async def get_global_metrics():
     """Retrieve global un-filtered counts for Total, High, Medium, and Low threat events."""

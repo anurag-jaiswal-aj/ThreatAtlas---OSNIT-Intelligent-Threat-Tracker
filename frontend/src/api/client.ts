@@ -33,6 +33,47 @@ export const fetchEvents = async (filters: EventFilters = {}): Promise<EventList
   return response.data;
 };
 
+export const exportEvents = async (filters: EventFilters, format: 'pdf' | 'stix'): Promise<void> => {
+  const params: Record<string, any> = { format };
+  if (filters.threat_level) params.threat_level = filters.threat_level;
+  if (filters.min_threat_score) params.min_threat_score = filters.min_threat_score;
+  if (filters.search) params.search = filters.search;
+  if (filters.event_type) params.event_type = filters.event_type;
+  if (filters.bbox) params.bbox = filters.bbox;
+  if (filters.countries && filters.countries.length > 0) {
+    params.countries = filters.countries.join(',');
+  }
+
+  const response = await apiClient.get('/events/export', {
+    params,
+    responseType: 'blob', // Important for handling binary streams
+  });
+
+  // Trigger download
+  const blob = new Blob([response.data], {
+    type: format === 'pdf' ? 'application/pdf' : 'application/stix+json',
+  });
+  const url = window.URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+
+  // Extract filename from header if possible, else fallback
+  const contentDisposition = response.headers['content-disposition'];
+  let filename = format === 'pdf' ? 'threatatlas_export.pdf' : 'threatatlas_export.json';
+  if (contentDisposition) {
+    const filenameMatch = contentDisposition.match(/filename="?(.+)"?/i);
+    if (filenameMatch && filenameMatch.length === 2) {
+      filename = filenameMatch[1];
+    }
+  }
+
+  link.setAttribute('download', filename);
+  document.body.appendChild(link);
+  link.click();
+  link.remove();
+  window.URL.revokeObjectURL(url);
+};
+
 export const fetchGlobalMetrics = async (): Promise<EventGlobalMetrics> => {
   const response = await apiClient.get<EventGlobalMetrics>('/events/stats');
   return response.data;
