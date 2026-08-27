@@ -58,6 +58,13 @@ export interface EventListResponse {
   items: Event[];
 }
 
+export interface EventGlobalMetrics {
+  total: number;
+  high: number;
+  medium: number;
+  low: number;
+}
+
 export interface RawPost {
   id: string;
   source: string;

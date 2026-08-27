@@ -3,20 +3,35 @@ import { Header } from './components/Header';
 import { FilterPanel } from './components/FilterPanel';
 import { GlobeViewer } from './components/GlobeViewer';
 import { EventDetailDrawer } from './components/EventDetailDrawer';
-import { checkHealth, fetchEvents } from './api/client';
+import { checkHealth, fetchEvents, fetchGlobalMetrics } from './api/client';
 import { wsService } from './api/websocket';
-import type { Event, EventFilters } from './types';
+import type { Event, EventFilters, EventGlobalMetrics } from './types';
 import { AlertCircle, RefreshCw, Zap, X } from 'lucide-react';
 
 export const App: React.FC = () => {
   const [isOnline, setIsOnline] = useState<boolean>(true);
   const [filters, setFilters] = useState<EventFilters>({});
   const [events, setEvents] = useState<Event[]>([]);
-  const [totalEventsCount, setTotalEventsCount] = useState<number>(0);
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [liveToast, setLiveToast] = useState<{ message: string; threatLevel: string } | null>(null);
+  const [globalMetrics, setGlobalMetrics] = useState<EventGlobalMetrics>({
+    total: 0,
+    high: 0,
+    medium: 0,
+    low: 0,
+  });
+
+  // Load global metrics from API
+  const loadMetrics = useCallback(async () => {
+    try {
+      const metrics = await fetchGlobalMetrics();
+      setGlobalMetrics(metrics);
+    } catch (err) {
+      console.error('Failed to load global metrics:', err);
+    }
+  }, []);
 
   // Load events from API
   const loadEvents = useCallback(async () => {
@@ -28,7 +43,6 @@ export const App: React.FC = () => {
 
       const res = await fetchEvents(filters);
       setEvents(res.items);
-      setTotalEventsCount(res.total);
     } catch (err: any) {
       console.error('Failed to load events:', err);
       setIsOnline(false);
@@ -41,6 +55,10 @@ export const App: React.FC = () => {
   useEffect(() => {
     loadEvents();
   }, [loadEvents]);
+
+  useEffect(() => {
+    loadMetrics();
+  }, [loadMetrics]);
 
   // Subscribe to Real-Time WebSocket Events
   useEffect(() => {
@@ -58,7 +76,9 @@ export const App: React.FC = () => {
         }
       });
 
-      setTotalEventsCount((prev) => prev + (action === 'created' ? 1 : 0));
+      if (action === 'created' || action === 'updated' || action === 'merged') {
+        loadMetrics();
+      }
 
       // Trigger Live Toast Alert
       const toastMsg = `Live Event ${action.toUpperCase()}: ${incomingEvent.title}`;
@@ -74,16 +94,16 @@ export const App: React.FC = () => {
     };
   }, []);
 
-  const highCount = events.filter((e) => e.threat_level === 'High').length;
-
   return (
     <div className="w-screen h-screen flex flex-col bg-slate-950 text-slate-100 overflow-hidden font-sans select-none">
       {/* Header */}
       <Header
         isOnline={isOnline}
-        totalEvents={totalEventsCount}
-        highThreatCount={highCount}
-        onRefresh={loadEvents}
+        globalMetrics={globalMetrics}
+        onRefresh={() => {
+          loadEvents();
+          loadMetrics();
+        }}
       />
 
       {/* Main Viewport */}
@@ -95,7 +115,7 @@ export const App: React.FC = () => {
           events={events}
           selectedEvent={selectedEvent}
           onSelectEvent={setSelectedEvent}
-          totalEventsCount={totalEventsCount}
+          globalMetrics={globalMetrics}
         />
 
         {/* Center 3D Globe Viewer */}

@@ -6,6 +6,7 @@ import type {
   ProcessPendingResponse,
   RawPost,
   RawPostListResponse,
+  EventGlobalMetrics,
 } from '../types';
 
 const API_BASE_URL = '/api/v1';
@@ -26,6 +27,11 @@ export const fetchEvents = async (filters: EventFilters = {}): Promise<EventList
   if (filters.bbox) params.bbox = filters.bbox;
 
   const response = await apiClient.get<EventListResponse>('/events', { params });
+  return response.data;
+};
+
+export const fetchGlobalMetrics = async (): Promise<EventGlobalMetrics> => {
+  const response = await apiClient.get<EventGlobalMetrics>('/events/stats');
   return response.data;
 };
 
