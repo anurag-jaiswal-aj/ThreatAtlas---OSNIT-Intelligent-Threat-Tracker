@@ -117,17 +117,17 @@ export const GlobeViewer: React.FC<GlobeViewerProps> = ({
       }
 
       let color = Cesium.Color.fromCssColorString('#10B981'); // Low: Emerald Green
-      let pointSize = 10;
-      let outlineWidth = 1.5;
+      let pointSize = 16;
+      let outlineWidth = 2;
 
       if (evt.threat_level === 'High') {
         color = Cesium.Color.fromCssColorString('#EF4444'); // High: Crimson Red
-        pointSize = 14;
-        outlineWidth = 3;
+        pointSize = 24;
+        outlineWidth = 3.5;
       } else if (evt.threat_level === 'Medium') {
         color = Cesium.Color.fromCssColorString('#F97316'); // Medium: Amber/Orange
-        pointSize = 12;
-        outlineWidth = 2;
+        pointSize = 20;
+        outlineWidth = 2.5;
       }
 
       viewer.entities.add({
