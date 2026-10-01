@@ -1,6 +1,8 @@
 import asyncio
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+from uvicorn.middleware.proxy_headers import ProxyHeadersMiddleware
 from app.api.router import api_router
 from app.core.config import settings
 from app.core.logging import logger, setup_logging
@@ -57,6 +59,18 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+# Trust reverse proxy headers (Render, Cloudflare, ALB) for SSL/TLS and WebSocket (wss://) termination
+app.add_middleware(ProxyHeadersMiddleware, trusted_hosts="*")
+
+# Mount dynamic CORS middleware
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=settings.ALLOWED_ORIGINS,
+    allow_credentials="*" not in settings.ALLOWED_ORIGINS,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 # Mount API v1 router
 app.include_router(api_router, prefix=settings.API_V1_STR)
 
@@ -79,6 +93,8 @@ if __name__ == "__main__":
     uvicorn.run(
         "main:app",
         host="0.0.0.0",
-        port=8000,
+        port=settings.PORT,
         reload=settings.DEBUG,
+        proxy_headers=True,
+        forwarded_allow_ips="*",
     )

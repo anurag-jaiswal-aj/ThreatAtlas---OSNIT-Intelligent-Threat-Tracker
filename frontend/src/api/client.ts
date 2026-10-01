@@ -12,7 +12,10 @@ import type {
   WebhookAlertUpdate,
 } from '../types';
 
-const API_BASE_URL = '/api/v1';
+const rawApiUrl = (import.meta.env.VITE_API_URL || '').trim().replace(/\/+$/, '');
+const API_BASE_URL = rawApiUrl
+  ? (rawApiUrl.endsWith('/api/v1') ? rawApiUrl : `${rawApiUrl}/api/v1`)
+  : '/api/v1';
 
 export const apiClient = axios.create({
   baseURL: API_BASE_URL,

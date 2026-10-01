@@ -19,6 +19,40 @@ class RealtimeWebSocketService {
   private isExplicitlyClosed = false;
 
   private getWebSocketUrl(): string {
+    const wsEnv = (import.meta.env.VITE_WS_URL || '').trim();
+    if (wsEnv) {
+      let formatted = wsEnv.replace(/\/+$/, '');
+      if (formatted.startsWith('http://')) {
+        formatted = 'ws://' + formatted.slice(7);
+      } else if (formatted.startsWith('https://')) {
+        formatted = 'wss://' + formatted.slice(8);
+      } else if (!formatted.startsWith('ws://') && !formatted.startsWith('wss://')) {
+        const isSecure = window.location.protocol === 'https:';
+        formatted = `${isSecure ? 'wss' : 'ws'}://${formatted}`;
+      }
+
+      if (!formatted.includes('/api/v1/ws/events')) {
+        formatted = formatted.replace(/\/api\/v1\/?$/, '');
+        return `${formatted}/api/v1/ws/events`;
+      }
+      return formatted;
+    }
+
+    const apiEnv = (import.meta.env.VITE_API_URL || '').trim();
+    if (apiEnv) {
+      let formatted = apiEnv.replace(/\/+$/, '');
+      if (formatted.startsWith('http://')) {
+        formatted = 'ws://' + formatted.slice(7);
+      } else if (formatted.startsWith('https://')) {
+        formatted = 'wss://' + formatted.slice(8);
+      } else if (!formatted.startsWith('ws://') && !formatted.startsWith('wss://')) {
+        const isSecure = window.location.protocol === 'https:';
+        formatted = `${isSecure ? 'wss' : 'ws'}://${formatted}`;
+      }
+      formatted = formatted.replace(/\/api\/v1\/?$/, '');
+      return `${formatted}/api/v1/ws/events`;
+    }
+
     const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
     // Fallback to localhost:8000 if running on dev server
     const host = window.location.port === '3000' ? 'localhost:8000' : window.location.host;

@@ -76,7 +76,8 @@ export const App: React.FC = () => {
     } catch (err: any) {
       console.error('Failed to load events:', err);
       setIsOnline(false);
-      setError('Unable to connect to FastAPI backend at http://localhost:8000/api/v1. Ensure the Python backend is running.');
+      const targetBackend = import.meta.env.VITE_API_URL || 'http://localhost:8000';
+      setError(`Unable to connect to FastAPI backend at ${targetBackend}. Ensure the Python backend is running.`);
     } finally {
       setLoading(false);
     }

@@ -1,0 +1,29 @@
+services:
+  - type: web
+    name: threatatlas-backend
+    env: docker
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: ./backend
+    plan: free
+    healthCheckPath: /api/v1/health
+    envVars:
+      - key: ENVIRONMENT
+        value: production
+      - key: DEBUG
+        value: "false"
+      - key: PORT
+        value: "10000"
+      - key: PROJECT_NAME
+        value: "OSINT Threat Intelligence Platform"
+      - key: API_V1_STR
+        value: "/api/v1"
+      - key: LOG_LEVEL
+        value: "INFO"
+      - key: MONGODB_URL
+        sync: false
+      - key: DATABASE_NAME
+        value: threat_atlas
+      - key: REDIS_URL
+        sync: false
+      - key: ALLOWED_ORIGINS
+        sync: false
