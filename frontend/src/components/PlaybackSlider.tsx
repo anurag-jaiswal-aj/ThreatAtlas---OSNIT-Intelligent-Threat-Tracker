@@ -170,8 +170,12 @@ export const PlaybackSlider: React.FC<PlaybackSliderProps> = ({ events, playback
 
           {isCustomRange && presetTimeWindow && (
             <div className="flex items-center gap-2 text-[10px] font-mono text-slate-400 ml-2">
+              <label htmlFor="customRangeStartInput" className="sr-only">Range Start Date</label>
               <input
+                id="customRangeStartInput"
+                name="custom_range_start"
                 type="datetime-local"
+                aria-label="Custom Timeline Start Date"
                 className="bg-slate-900/80 border border-slate-700 rounded px-1.5 py-1 focus:ring-1 focus:ring-blue-500 outline-none"
                 value={new Date(presetTimeWindow.start - new Date().getTimezoneOffset() * 60000).toISOString().slice(0,16)}
                 onChange={(e) => {
@@ -180,8 +184,12 @@ export const PlaybackSlider: React.FC<PlaybackSliderProps> = ({ events, playback
                 }}
               />
               <span>TO</span>
+              <label htmlFor="customRangeEndInput" className="sr-only">Range End Date</label>
               <input
+                id="customRangeEndInput"
+                name="custom_range_end"
                 type="datetime-local"
+                aria-label="Custom Timeline End Date"
                 className="bg-slate-900/80 border border-slate-700 rounded px-1.5 py-1 focus:ring-1 focus:ring-blue-500 outline-none"
                 value={new Date(presetTimeWindow.end - new Date().getTimezoneOffset() * 60000).toISOString().slice(0,16)}
                 onChange={(e) => {
@@ -237,8 +245,12 @@ export const PlaybackSlider: React.FC<PlaybackSliderProps> = ({ events, playback
             <span className="text-[10px] font-mono text-slate-500 shrink-0 w-16 text-right">
               {new Date(minTime).toLocaleDateString()}
             </span>
+            <label htmlFor="playbackTimelineSlider" className="sr-only">Timeline Scrubbing</label>
             <input
+              id="playbackTimelineSlider"
+              name="playback_timeline"
               type="range"
+              aria-label="Temporal Timeline Scrubbing"
               min={minTime}
               max={maxTime}
               value={currentDisplayTime}

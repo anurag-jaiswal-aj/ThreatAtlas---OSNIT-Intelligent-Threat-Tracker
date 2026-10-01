@@ -269,3 +269,15 @@ def test_cors_headers_handling():
     assert response.status_code == 200
     assert response.headers.get("access-control-allow-origin") == "http://localhost:3000"
 
+    # Test dynamic Vercel domain matching
+    response_vercel = client.options(
+        "/api/v1/health",
+        headers={
+            "Origin": "https://threat-atlas-osnit-intelligent-thre.vercel.app",
+            "Access-Control-Request-Method": "GET",
+        },
+    )
+    assert response_vercel.status_code == 200
+    assert response_vercel.headers.get("access-control-allow-origin") == "https://threat-atlas-osnit-intelligent-thre.vercel.app"
+
+

@@ -119,8 +119,10 @@ export const AlertsModal: React.FC<AlertsModalProps> = ({ isOpen, onClose }) => 
             
             <div className="flex space-x-4">
               <div className="flex-1">
-                <label className="block text-xs text-gray-400 mb-1">Webhook URL</label>
+                <label htmlFor="webhookUrlInput" className="block text-xs text-gray-400 mb-1">Webhook URL</label>
                 <input 
+                  id="webhookUrlInput"
+                  name="webhook_url"
                   type="url" 
                   value={url}
                   onChange={(e) => setUrl(e.target.value)}
@@ -131,8 +133,10 @@ export const AlertsModal: React.FC<AlertsModalProps> = ({ isOpen, onClose }) => 
               </div>
               
               <div className="w-1/3">
-                <label className="block text-xs text-gray-400 mb-1">Provider</label>
+                <label htmlFor="webhookProviderSelect" className="block text-xs text-gray-400 mb-1">Provider</label>
                 <select 
+                  id="webhookProviderSelect"
+                  name="provider"
                   value={provider}
                   onChange={(e) => setProvider(e.target.value as any)}
                   className="w-full bg-gray-900 text-white border border-gray-600 rounded px-3 py-2 text-sm focus:outline-none focus:border-blue-500"
@@ -146,8 +150,10 @@ export const AlertsModal: React.FC<AlertsModalProps> = ({ isOpen, onClose }) => 
 
             <div className="flex space-x-4">
               <div className="flex-1">
-                <label className="block text-xs text-gray-400 mb-1">Target Countries (comma-separated ISO codes)</label>
+                <label htmlFor="webhookCountriesInput" className="block text-xs text-gray-400 mb-1">Target Countries (comma-separated ISO codes)</label>
                 <input 
+                  id="webhookCountriesInput"
+                  name="countries"
                   type="text" 
                   value={countriesInput}
                   onChange={(e) => setCountriesInput(e.target.value)}
