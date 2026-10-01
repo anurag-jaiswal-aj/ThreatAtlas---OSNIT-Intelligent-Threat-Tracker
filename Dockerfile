@@ -13,16 +13,28 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
     && rm -rf /var/lib/apt/lists/*
 
-# Install Python dependencies from backend directory
-COPY backend/requirements.txt requirements.txt
-RUN pip install --no-cache-dir --upgrade pip && \
-    pip install --no-cache-dir -r requirements.txt
+# Copy requirements from root or backend directory
+COPY requirements.txt* backend/requirements.txt* /tmp/reqs/
+RUN if [ -f "/tmp/reqs/backend/requirements.txt" ]; then \
+        cp /tmp/reqs/backend/requirements.txt /app/requirements.txt; \
+    else \
+        cp /tmp/reqs/requirements.txt /app/requirements.txt; \
+    fi && \
+    rm -rf /tmp/reqs && \
+    pip install --no-cache-dir --upgrade pip && \
+    pip install --no-cache-dir -r /app/requirements.txt
 
 # Download spaCy model during build step (en_core_web_lg)
 RUN python -m spacy download en_core_web_lg
 
-# Copy backend application source code
-COPY backend/ .
+# Copy application source code into /app cleanly whether context is root or backend
+COPY . /tmp/repo/
+RUN if [ -d "/tmp/repo/backend" ]; then \
+        cp -r /tmp/repo/backend/. /app/; \
+    else \
+        cp -r /tmp/repo/. /app/; \
+    fi && \
+    rm -rf /tmp/repo
 
 # Expose container port
 EXPOSE 8000
